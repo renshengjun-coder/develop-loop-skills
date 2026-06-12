@@ -1,0 +1,16 @@
+id: PKG-ID-HERE
+owner: ""
+profile: standard
+mode: loop
+status: in_progress
+phases:
+  requirements:
+    status: pending
+    artifact_version: null
+  design:
+    status: pending
+    artifact_version: null
+  test-plan:
+    status: pending
+    artifact_version: null
+children: []

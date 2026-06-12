@@ -1,0 +1,7 @@
+package_id: PKG-ID-HERE
+suggested_tier: standard
+active_profile: standard
+signals: []
+confidence: medium
+override: null
+classified_at: null
