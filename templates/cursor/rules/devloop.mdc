@@ -1,0 +1,11 @@
+---
+description: Use Develop Loop SDLC skills and /devloop commands for change packages
+globs:
+alwaysApply: true
+---
+
+# Develop Loop
+
+- Orchestrator: `/devloop start|run|gate|status|classify`
+- Read project `AGENTS.md` for state paths (`.ai/packages/`, `artifacts/`, `traceability/`)
+- Phase skills are installed globally; follow archived design and acceptance criteria in `artifacts/<id>/`
