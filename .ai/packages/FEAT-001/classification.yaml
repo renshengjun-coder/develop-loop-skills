@@ -1,0 +1,9 @@
+package_id: FEAT-001
+suggested_tier: standard
+active_profile: standard
+signals:
+  - type: feature
+  - blast_radius: limited
+confidence: high
+override: null
+classified_at: "2026-06-12"
