@@ -1,0 +1,30 @@
+name: Build Pack
+on:
+  pull_request:
+    paths:
+      - '.ai/**'
+      - 'bin/**'
+      - 'scripts/build-pack.sh'
+      - 'scripts/test-build-pack.sh'
+      - 'scripts/test-devloop-cli.sh'
+      - 'templates/**'
+      - 'VERSION'
+  push:
+    branches: [main]
+    paths:
+      - '.ai/**'
+      - 'bin/**'
+      - 'scripts/build-pack.sh'
+      - 'templates/**'
+      - 'VERSION'
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test pack
+        run: |
+          chmod +x scripts/build-pack.sh scripts/test-build-pack.sh scripts/test-devloop-cli.sh bin/devloop
+          ./scripts/test-build-pack.sh
+          ./scripts/test-devloop-cli.sh

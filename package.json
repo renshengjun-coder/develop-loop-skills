@@ -1,0 +1,22 @@
+{
+  "name": "@develop-loop/skills",
+  "version": "0.3.0",
+  "description": "Develop Loop SDLC skills — global install and project init CLI",
+  "bin": {
+    "devloop": "bin/devloop"
+  },
+  "files": [
+    "bin/",
+    "scripts/build-pack.sh",
+    "scripts/loop-verify.sh",
+    "scripts/test-loop-verify.sh",
+    ".ai/",
+    "templates/",
+    "VERSION"
+  ],
+  "scripts": {
+    "prepack": "./scripts/build-pack.sh",
+    "test": "./scripts/test-build-pack.sh && ./scripts/test-devloop-cli.sh && ./scripts/test-loop-verify.sh"
+  },
+  "license": "MIT"
+}

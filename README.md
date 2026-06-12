@@ -8,13 +8,42 @@ Develop Loop turns coding agents into **engineering process executors** — prod
 
 ## Install
 
-Copy or symlink `.ai/skills/` into your target project. For Cursor, also copy pointer skills from `.cursor/skills/`.
+### 1. Global skills (once per machine)
 
-| Runtime | Path |
-|---------|------|
-| Cursor | `.cursor/skills/` (pointers to `.ai/skills/`) |
-| Codex | Read `AGENTS.md` in project root |
-| Claude Code | `.claude/skills/` |
+From a clone of this repo (or after `npm i -g @develop-loop/skills`):
+
+```bash
+./scripts/build-pack.sh   # auto-run by bin/devloop if pack/ missing
+./bin/devloop install --global
+```
+
+Installs 9 skills to `~/.cursor/skills/`, `~/.claude/skills/`, and a Develop Loop block in `~/.codex/AGENTS.md`.
+
+### 2. Project scaffold (once per repo)
+
+In your application repository (new or existing):
+
+```bash
+/path/to/develop-loop-skills/bin/devloop init
+# optional: devloop init --with-ci
+```
+
+Creates `.ai/config/`, package template, `scripts/loop-verify.sh`, `AGENTS.md`, `artifacts/`, `traceability/`.
+
+### 3. Verify
+
+```bash
+devloop doctor
+```
+
+### Upgrade
+
+```bash
+devloop install --global --upgrade
+devloop init --upgrade
+```
+
+**Developing this repo** still uses `.ai/skills/` as source of truth and `.cursor/skills/` as thin pointers for dogfooding.
 
 ## Commands
 
@@ -73,8 +102,8 @@ See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full d
 ## Verify locally (L3)
 
 ```bash
-./scripts/devloop-verify.sh FEAT-001
-./scripts/devloop-verify.sh --enforce FEAT-003
+./scripts/loop-verify.sh FEAT-001
+./scripts/loop-verify.sh --enforce FEAT-003
 ./scripts/test-loop-verify.sh
 ```
 
