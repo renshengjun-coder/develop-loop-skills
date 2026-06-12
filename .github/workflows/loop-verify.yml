@@ -1,0 +1,34 @@
+name: Loop Verify
+on:
+  pull_request:
+    paths:
+      - '.ai/**'
+      - 'artifacts/**'
+      - 'traceability/**'
+      - 'scripts/loop-verify.sh'
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: 'Package ID to verify'
+        default: 'FEAT-003'
+      enforce:
+        description: 'Enforce mode (fail on warnings)'
+        type: boolean
+        default: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify package
+        run: |
+          PKG="${{ github.event.inputs.package_id || 'FEAT-003' }}"
+          ENFORCE="${{ github.event.inputs.enforce }}"
+          chmod +x scripts/loop-verify.sh scripts/test-loop-verify.sh
+          ./scripts/test-loop-verify.sh
+          if [[ "$ENFORCE" == "true" || "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            ./scripts/loop-verify.sh --enforce "$PKG"
+          else
+            ./scripts/loop-verify.sh "$PKG"
+          fi

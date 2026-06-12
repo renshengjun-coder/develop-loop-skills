@@ -1,0 +1,34 @@
+# .ai/packages/_template/package.yaml
+id: PKG-ID-HERE
+owner: ""
+profile: standard
+mode: loop
+status: in_progress
+phases:
+  requirements:
+    status: pending
+    artifact_version: null
+  design:
+    status: pending
+    artifact_version: null
+  test-plan:
+    status: pending
+    artifact_version: null
+  implementation:
+    status: pending
+    artifact_version: null
+  code-review:
+    status: pending
+    artifact_version: null
+  test-report:
+    status: pending
+    artifact_version: null
+  release:
+    status: pending
+    artifact_version: null
+children: []
+# Phase 2 parent-child example:
+# Replace children: [] above with:
+# children:
+#   - id: FEAT-CHILD-001
+#     relationship: implements
