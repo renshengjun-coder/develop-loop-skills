@@ -1,0 +1,27 @@
+name: Loop Verify
+on:
+  pull_request:
+    paths:
+      - '.ai/**'
+      - 'artifacts/**'
+      - 'traceability/**'
+      - 'scripts/loop-verify.sh'
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: 'Package ID to verify'
+        default: 'FEAT-001'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify package
+        run: |
+          PKG="${{ github.event.inputs.package_id || 'FEAT-001' }}"
+          chmod +x scripts/loop-verify.sh
+          ./scripts/loop-verify.sh "$PKG"
+      - name: Report (observe mode)
+        if: failure()
+        run: echo "::warning::Loop verify failed — observe mode, not blocking merge yet"
