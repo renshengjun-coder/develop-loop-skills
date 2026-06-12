@@ -94,7 +94,7 @@ Walkthroughs: `docs/examples/FEAT-001-walkthrough.md`, `docs/examples/FEAT-003-w
   skills/
 artifacts/<id>/
 traceability/<id>/
-scripts/devloop-verify.sh
+scripts/loop-verify.sh
 ```
 
 See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full design.
