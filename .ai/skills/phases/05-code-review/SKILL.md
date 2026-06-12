@@ -3,7 +3,7 @@ name: 05-code-review
 description: >-
   Evidence-grounded code review across general, security, performance,
   maintainability, and testability lenses. Use for code review phase, PR review,
-  security review — standalone or via /loop. Does not issue final gate PASS.
+  security review — standalone or via /devloop. Does not issue final gate PASS.
 ---
 
 # Code-Review Phase Skill

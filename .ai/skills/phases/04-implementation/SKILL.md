@@ -3,7 +3,7 @@ name: 04-implementation
 description: >-
   Plans and executes approved design within scope. Produces implementation plan,
   changed-files manifest, and coding log. Use for implementation phase, coding,
-  build feature, implement design — standalone or via /loop. Does not issue
+  build feature, implement design — standalone or via /devloop. Does not issue
   final gate PASS.
 ---
 

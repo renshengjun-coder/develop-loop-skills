@@ -18,13 +18,16 @@ Copy or symlink `.ai/skills/` into your target project. For Cursor, also copy po
 
 ## Commands
 
+Orchestrator slash command: **`/devloop`** (avoids collision with agent built-ins like Cursor's `/loop`).
+
 | Command | Description |
 |---------|-------------|
-| `/loop start <id>` | Create package, classify, select profile |
-| `/loop run <id>` | E2E orchestration (loop mode) |
-| `/loop run <id> --pipeline` | Single pass per phase |
-| `/loop gate <id> <phase>` | L2 gate check for one phase |
-| `/loop status <id>` | Package status and blockers |
+| `/devloop start <id>` | Create package, classify, select profile |
+| `/devloop run <id>` | E2E orchestration (loop mode) |
+| `/devloop run <id> --pipeline` | Single pass per phase |
+| `/devloop gate <id> <phase>` | L2 gate check for one phase |
+| `/devloop status <id>` | Package status and blockers |
+| `/devloop classify <id>` | Re-run or confirm complexity classification |
 
 All 7 phase skills are invokable **standalone** without the loop.
 
@@ -62,7 +65,7 @@ Walkthroughs: `docs/examples/FEAT-001-walkthrough.md`, `docs/examples/FEAT-003-w
   skills/
 artifacts/<id>/
 traceability/<id>/
-scripts/loop-verify.sh
+scripts/devloop-verify.sh
 ```
 
 See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full design.
@@ -70,8 +73,8 @@ See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full d
 ## Verify locally (L3)
 
 ```bash
-./scripts/loop-verify.sh FEAT-001
-./scripts/loop-verify.sh --enforce FEAT-003
+./scripts/devloop-verify.sh FEAT-001
+./scripts/devloop-verify.sh --enforce FEAT-003
 ./scripts/test-loop-verify.sh
 ```
 

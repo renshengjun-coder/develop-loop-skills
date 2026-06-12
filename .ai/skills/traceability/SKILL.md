@@ -3,7 +3,7 @@ name: traceability
 description: >-
   Maintains requirement-to-design-to-test trace matrix and typed artifact links.
   Use after phase archive, when updating traceability, trace matrix, or requirement
-  coverage map. Invokable standalone or from phase/loop skills.
+  coverage map. Invokable standalone or from phase or devloop skills.
 ---
 
 # Traceability Skill

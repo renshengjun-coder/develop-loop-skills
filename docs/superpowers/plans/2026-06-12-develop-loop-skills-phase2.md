@@ -29,9 +29,9 @@
 | `.ai/skills/lifecycle-loop/SKILL.md` | 7-phase path map, profile-aware classify, parent-child gates |
 | `.ai/skills/lifecycle-loop/reference.md` | Profile tables, parent-child examples |
 | `.ai/skills/traceability/SKILL.md` | Code column + `implements:` frontmatter rules |
-| `scripts/loop-verify.sh` | 7 phases, profile-driven artifacts, `--enforce` |
+| `scripts/devloop-verify.sh` | 7 phases, profile-driven artifacts, `--enforce` |
 | `scripts/test-loop-verify.sh` | Tests for new phases + enforce flag |
-| `.github/workflows/loop-verify.yml` | Enforce mode (required check) |
+| `.github/workflows/devloop-verify.yml` | Enforce mode (required check) |
 | `.ai/packages/FEAT-003/` | Full 7-phase demo package |
 | `artifacts/FEAT-003/` | 7-phase narrative artifacts |
 | `traceability/FEAT-003/matrix.md` | Full chain incl. code files |
@@ -195,7 +195,7 @@ children: []
 
 - [ ] **Step 3: Verify MVP still valid**
 
-Run: `./scripts/loop-verify.sh FEAT-001`
+Run: `./scripts/devloop-verify.sh FEAT-001`
 Expected: `PASS` (FEAT-001 only has 3 archived phases; verifier checks archived phases only)
 
 - [ ] **Step 4: Commit**
@@ -221,7 +221,7 @@ name: 04-implementation
 description: >-
   Plans and executes approved design within scope. Produces implementation plan,
   changed-files manifest, and coding log. Use for implementation phase, coding,
-  build feature, implement design — standalone or via /loop. Does not issue
+  build feature, implement design — standalone or via /devloop. Does not issue
   final gate PASS.
 ---
 ```
@@ -318,7 +318,7 @@ name: 05-code-review
 description: >-
   Evidence-grounded code review across general, security, performance,
   maintainability, and testability lenses. Use for code review phase, PR review,
-  security review — standalone or via /loop. Does not issue final gate PASS.
+  security review — standalone or via /devloop. Does not issue final gate PASS.
 ---
 ```
 
@@ -398,7 +398,7 @@ name: 06-test-report
 description: >-
   Runs and documents test execution against the test plan. Produces execution
   summary, coverage, defects, and release recommendation. Use for test report,
-  validation, QA results — standalone or via /loop. Does not issue final gate PASS.
+  validation, QA results — standalone or via /devloop. Does not issue final gate PASS.
 ---
 ```
 
@@ -470,7 +470,7 @@ git commit -m "feat: add 06-test-report phase skill"
 name: 07-release-retro
 description: >-
   Produces release notes, known issues, and retrospective. Closes the SDLC loop.
-  Use for release, retro, ship, deploy — standalone or via /loop. Does not issue
+  Use for release, retro, ship, deploy — standalone or via /devloop. Does not issue
   final gate PASS.
 ---
 ```
@@ -538,7 +538,7 @@ Replace the line:
 With:
 
 ```markdown
-After confirm, set `active_profile` to the confirmed tier (`routine`, `standard`, or `high_risk`). Write matching `profile` field in `package.yaml`. Show the user the phase list and human gates from `profiles.yaml` for that profile before first `/loop run`.
+After confirm, set `active_profile` to the confirmed tier (`routine`, `standard`, or `high_risk`). Write matching `profile` field in `package.yaml`. Show the user the phase list and human gates from `profiles.yaml` for that profile before first `/devloop run`.
 ```
 
 - [ ] **Step 2: Expand phase skill path map**
@@ -629,7 +629,7 @@ children:
 
 - Do not copy child artifacts into parent `artifacts/` folder.
 - Parent PRD may reference child IDs in scope; traceability stays per-package.
-- Child packages run `/loop run` independently; parent `/loop run` checks children only at gate time.
+- Child packages run `/devloop run` independently; parent `/devloop run` checks children only at gate time.
 ```
 
 - [ ] **Step 2: Add parent-child example to `reference.md`**
@@ -702,7 +702,7 @@ git commit -m "feat: traceability code column and implementation links"
 
 **Files:**
 - Modify: `scripts/test-loop-verify.sh`
-- Modify: `scripts/loop-verify.sh`
+- Modify: `scripts/devloop-verify.sh`
 
 - [ ] **Step 1: Write failing tests for new phases and enforce**
 
@@ -795,16 +795,16 @@ fi
 
 - [ ] **Step 4: Run tests**
 
-Run: `chmod +x scripts/loop-verify.sh scripts/test-loop-verify.sh && ./scripts/test-loop-verify.sh`
+Run: `chmod +x scripts/devloop-verify.sh scripts/test-loop-verify.sh && ./scripts/test-loop-verify.sh`
 Expected: `All loop-verify tests passed` (Test 6 skipped or passes depending on FEAT-003)
 
-Run: `./scripts/loop-verify.sh FEAT-001`
+Run: `./scripts/devloop-verify.sh FEAT-001`
 Expected: `PASS`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/loop-verify.sh scripts/test-loop-verify.sh
+git add scripts/devloop-verify.sh scripts/test-loop-verify.sh
 git commit -m "feat: profile-aware loop-verify with enforce flag"
 ```
 
@@ -901,16 +901,16 @@ Full matrix: 3 AC rows with design section, TC IDs, code file paths, status `cov
 - [ ] **Step 9: Write walkthrough**
 
 `docs/examples/FEAT-003-walkthrough.md` covering:
-- `/loop classify` selecting each profile tier
+- `/devloop classify` selecting each profile tier
 - Full 7-phase loop path
 - Evidence chain through code column
 
 - [ ] **Step 10: Verify**
 
-Run: `./scripts/loop-verify.sh FEAT-003`
+Run: `./scripts/devloop-verify.sh FEAT-003`
 Expected: `PASS`
 
-Run: `./scripts/loop-verify.sh --enforce FEAT-003`
+Run: `./scripts/devloop-verify.sh --enforce FEAT-003`
 Expected: `PASS` (no warnings)
 
 - [ ] **Step 11: Commit**
@@ -974,7 +974,7 @@ Parent artifacts: minimal 7-phase set where PRD scope references child package. 
 
 - [ ] **Step 3: Verify both packages**
 
-Run: `./scripts/loop-verify.sh FEAT-CHILD && ./scripts/loop-verify.sh FEAT-PARENT`
+Run: `./scripts/devloop-verify.sh FEAT-CHILD && ./scripts/devloop-verify.sh FEAT-PARENT`
 Expected: both `PASS`
 
 - [ ] **Step 4: Commit**
@@ -989,7 +989,7 @@ git commit -m "feat: add parent-child demo packages FEAT-PARENT and FEAT-CHILD"
 ## Task 12: CI enforce mode
 
 **Files:**
-- Modify: `.github/workflows/loop-verify.yml`
+- Modify: `.github/workflows/devloop-verify.yml`
 - Create: `docs/ci/branch-protection.md`
 
 - [ ] **Step 1: Update workflow to enforce**
@@ -1002,7 +1002,7 @@ on:
       - '.ai/**'
       - 'artifacts/**'
       - 'traceability/**'
-      - 'scripts/loop-verify.sh'
+      - 'scripts/devloop-verify.sh'
   workflow_dispatch:
     inputs:
       package_id:
@@ -1022,12 +1022,12 @@ jobs:
         run: |
           PKG="${{ github.event.inputs.package_id || 'FEAT-003' }}"
           ENFORCE="${{ github.event.inputs.enforce }}"
-          chmod +x scripts/loop-verify.sh scripts/test-loop-verify.sh
+          chmod +x scripts/devloop-verify.sh scripts/test-loop-verify.sh
           ./scripts/test-loop-verify.sh
           if [[ "$ENFORCE" == "true" || "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            ./scripts/loop-verify.sh --enforce "$PKG"
+            ./scripts/devloop-verify.sh --enforce "$PKG"
           else
-            ./scripts/loop-verify.sh "$PKG"
+            ./scripts/devloop-verify.sh "$PKG"
           fi
 ```
 
@@ -1040,20 +1040,20 @@ jobs:
 
 1. GitHub → Settings → Branches → Add rule for `main`
 2. Require status check: **Loop Verify / verify**
-3. PRs touching `.ai/`, `artifacts/`, `traceability/`, or `scripts/loop-verify.sh` must pass `./scripts/loop-verify.sh --enforce <package_id>`
+3. PRs touching `.ai/`, `artifacts/`, `traceability/`, or `scripts/devloop-verify.sh` must pass `./scripts/devloop-verify.sh --enforce <package_id>`
 
 Default CI package: `FEAT-003` (full 7-phase). MVP package `FEAT-001` remains valid for local smoke tests.
 ```
 
 - [ ] **Step 3: Verify locally**
 
-Run: `./scripts/test-loop-verify.sh && ./scripts/loop-verify.sh --enforce FEAT-003`
+Run: `./scripts/test-loop-verify.sh && ./scripts/devloop-verify.sh --enforce FEAT-003`
 Expected: all pass
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .github/workflows/loop-verify.yml docs/ci/branch-protection.md
+git add .github/workflows/devloop-verify.yml docs/ci/branch-protection.md
 git commit -m "ci: enable loop-verify enforce mode on pull requests"
 ```
 
@@ -1103,7 +1103,7 @@ Replace "MVP scope vs Phase 2" section with:
 
 - **Shipped:** 7 phase skills, 3 profiles, parent-child, CI enforce
 - **Demo packages:** FEAT-001 (3-phase), FEAT-003 (7-phase), FEAT-PARENT/FEAT-CHILD
-- Commands: `./scripts/loop-verify.sh --enforce FEAT-003`
+- Commands: `./scripts/devloop-verify.sh --enforce FEAT-003`
 
 - [ ] **Step 4: Commit**
 
@@ -1124,10 +1124,10 @@ git commit -m "docs: Phase 2 skill pointers and updated agent entry"
 ```bash
 # L3 regression + enforce
 ./scripts/test-loop-verify.sh
-./scripts/loop-verify.sh FEAT-001
-./scripts/loop-verify.sh --enforce FEAT-003
-./scripts/loop-verify.sh FEAT-PARENT
-./scripts/loop-verify.sh FEAT-CHILD
+./scripts/devloop-verify.sh FEAT-001
+./scripts/devloop-verify.sh --enforce FEAT-003
+./scripts/devloop-verify.sh FEAT-PARENT
+./scripts/devloop-verify.sh FEAT-CHILD
 
 # All 7 phase skills exist
 for n in 01-requirement 02-design 03-test-plan 04-implementation 05-code-review 06-test-report 07-release-retro; do
@@ -1160,7 +1160,7 @@ Map spec §8.3 Stage 2–3 criteria:
 | routine profile skips design/test-plan | walkthrough classify example |
 | high_risk human gates | profiles.yaml + walkthrough |
 | Parent-child gate | FEAT-PARENT gates/release-1.md |
-| CI enforce | `.github/workflows/loop-verify.yml` |
+| CI enforce | `.github/workflows/devloop-verify.yml` |
 | Code in trace matrix | traceability/FEAT-003/matrix.md |
 | FEAT-001 MVP unchanged | loop-verify FEAT-001 PASS |
 

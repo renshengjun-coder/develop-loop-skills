@@ -2,7 +2,7 @@
 name: 06-test-report
 description: >-
   Use when a package needs test-report, validation, QA results, test execution,
-  coverage evidence, defects, or release recommendation; standalone or via /loop.
+  coverage evidence, defects, or release recommendation; standalone or via /devloop.
   Does not issue final gate PASS.
 ---
 

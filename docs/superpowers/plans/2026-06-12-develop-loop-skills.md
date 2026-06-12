@@ -19,7 +19,7 @@
 | `.ai/config/profiles.yaml` | Standard profile: phases, human_gates, max_reentry, required_artifacts |
 | `.ai/packages/_template/package.yaml` | Copy template for new packages |
 | `.ai/packages/_template/classification.yaml` | Classification record template |
-| `.ai/skills/lifecycle-loop/SKILL.md` | `/loop` commands, classify, execution, gate, escalation |
+| `.ai/skills/lifecycle-loop/SKILL.md` | `/devloop` commands, classify, execution, gate, escalation |
 | `.ai/skills/lifecycle-loop/reference.md` | Command cheat sheet, profile table, examples |
 | `.ai/skills/traceability/SKILL.md` | Matrix + frontmatter link maintenance |
 | `.ai/skills/phases/01-requirement/SKILL.md` | Requirements phase (standalone + L1) |
@@ -28,9 +28,9 @@
 | `artifacts/FEAT-001/` | Demo narrative artifacts (3 phases) |
 | `.ai/packages/FEAT-001/` | Demo package state + gates |
 | `traceability/FEAT-001/matrix.md` | Demo trace matrix |
-| `scripts/loop-verify.sh` | L3 structural verifier |
+| `scripts/devloop-verify.sh` | L3 structural verifier |
 | `scripts/test-loop-verify.sh` | Bash tests for verifier |
-| `.github/workflows/loop-verify.yml` | CI observe mode |
+| `.github/workflows/devloop-verify.yml` | CI observe mode |
 | `AGENTS.md` | Codex/generic agent entry |
 | `README.md` | Install + usage guide |
 | `.cursor/skills/*/SKILL.md` | Thin pointers to `.ai/skills/` |
@@ -126,7 +126,7 @@ AI-native SDLC skills for end-to-end software development.
 
 | Skill | Path | Trigger |
 |-------|------|---------|
-| Lifecycle Loop | `.ai/skills/lifecycle-loop/SKILL.md` | `/loop start\|run\|gate\|status\|classify` |
+| Lifecycle Loop | `.ai/skills/lifecycle-loop/SKILL.md` | `/devloop start\|run\|gate\|status\|classify` |
 | Requirements | `.ai/skills/phases/01-requirement/SKILL.md` | PRD, user stories, acceptance criteria |
 | Design | `.ai/skills/phases/02-design/SKILL.md` | architecture, API design |
 | Test Plan | `.ai/skills/phases/03-test-plan/SKILL.md` | test strategy, test cases |
@@ -141,7 +141,7 @@ AI-native SDLC skills for end-to-end software development.
 
 - [ ] **Step 4: Create `README.md` skeleton**
 
-Include sections: Overview, Install (copy `.ai/skills` to Cursor/Codex/Claude), Commands (`/loop start`, `/loop run`, standalone phase skills), MVP scope (3 phases), 3-level quality model, Directory layout.
+Include sections: Overview, Install (copy `.ai/skills` to Cursor/Codex/Claude), Commands (`/devloop start`, `/devloop run`, standalone phase skills), MVP scope (3 phases), 3-level quality model, Directory layout.
 
 - [ ] **Step 5: Verify scaffold**
 
@@ -171,8 +171,8 @@ name: lifecycle-loop
 description: >-
   Orchestrates end-to-end SDLC for a change package. Classifies complexity,
   selects workflow profile, invokes phase skills, issues L2 gate decisions,
-  controls loop/pipeline re-entry. Use for /loop start, /loop run, /loop gate,
-  /loop status, /loop classify, lifecycle, SDLC loop, quality gate.
+  controls loop/pipeline re-entry. Use for /devloop start, /devloop run, /devloop gate,
+  /devloop status, /devloop classify, lifecycle, SDLC loop, quality gate.
 ---
 ```
 
@@ -251,7 +251,7 @@ name: traceability
 description: >-
   Maintains requirement-to-design-to-test trace matrix and typed artifact links.
   Use after phase archive, when updating traceability, trace matrix, or requirement
-  coverage map. Invokable standalone or from phase/loop skills.
+  coverage map. Invokable standalone or from phase or devloop skills.
 ---
 ```
 
@@ -310,7 +310,7 @@ git commit -m "feat: add traceability skill and matrix template"
 
 - [ ] **Step 1: Write frontmatter with standalone triggers**
 
-Description must include: PRD, user stories, acceptance criteria, requirements phase — usable with or without `/loop`.
+Description must include: PRD, user stories, acceptance criteria, requirements phase — usable with or without `/devloop`.
 
 - [ ] **Step 2: Add Required inputs**
 
@@ -543,7 +543,7 @@ Full matrix: 3 rows for AC-001..003 with design sections and TC IDs filled; stat
 - [ ] **Step 7: Write walkthrough doc**
 
 `docs/examples/FEAT-001-walkthrough.md` documenting:
-- `/loop start FEAT-001` equivalent steps taken
+- `/devloop start FEAT-001` equivalent steps taken
 - Loop mode E2E path
 - Pipeline mode fail/resume example (narrative)
 - Evidence chain diagram (requirement → design → test → gate)
@@ -560,7 +560,7 @@ git commit -m "feat: add FEAT-001 demo package with full evidence chain"
 ## Task 8: loop-verify.sh (L3) + tests
 
 **Files:**
-- Create: `scripts/loop-verify.sh`
+- Create: `scripts/devloop-verify.sh`
 - Create: `scripts/test-loop-verify.sh`
 
 - [ ] **Step 1: Write failing test script**
@@ -570,7 +570,7 @@ git commit -m "feat: add FEAT-001 demo package with full evidence chain"
 # scripts/test-loop-verify.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCRIPT="$ROOT/scripts/loop-verify.sh"
+SCRIPT="$ROOT/scripts/devloop-verify.sh"
 
 # Test 1: FEAT-001 demo package passes
 output=$("$SCRIPT" FEAT-001 2>&1) || { echo "FAIL: FEAT-001 should pass"; echo "$output"; exit 1; }
@@ -606,7 +606,7 @@ Expected: FAIL — `loop-verify.sh` not found
 
 ```bash
 #!/usr/bin/env bash
-# scripts/loop-verify.sh — L3 structural verifier (no LLM)
+# scripts/devloop-verify.sh — L3 structural verifier (no LLM)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PKG_ID="${1:?Usage: loop-verify.sh <package_id>}"
@@ -673,10 +673,10 @@ exit 0
 
 - [ ] **Step 4: Run tests**
 
-Run: `chmod +x scripts/loop-verify.sh scripts/test-loop-verify.sh && ./scripts/test-loop-verify.sh`
+Run: `chmod +x scripts/devloop-verify.sh scripts/test-loop-verify.sh && ./scripts/test-loop-verify.sh`
 Expected: `All loop-verify tests passed`
 
-Run: `./scripts/loop-verify.sh FEAT-001`
+Run: `./scripts/devloop-verify.sh FEAT-001`
 Expected: `PASS`
 
 - [ ] **Step 5: Commit**
@@ -691,7 +691,7 @@ git commit -m "feat: add L3 loop-verify script with tests"
 ## Task 9: GitHub Actions (observe mode)
 
 **Files:**
-- Create: `.github/workflows/loop-verify.yml`
+- Create: `.github/workflows/devloop-verify.yml`
 
 - [ ] **Step 1: Write workflow**
 
@@ -703,7 +703,7 @@ on:
       - '.ai/**'
       - 'artifacts/**'
       - 'traceability/**'
-      - 'scripts/loop-verify.sh'
+      - 'scripts/devloop-verify.sh'
   workflow_dispatch:
     inputs:
       package_id:
@@ -718,8 +718,8 @@ jobs:
       - name: Verify package
         run: |
           PKG="${{ github.event.inputs.package_id || 'FEAT-001' }}"
-          chmod +x scripts/loop-verify.sh
-          ./scripts/loop-verify.sh "$PKG"
+          chmod +x scripts/devloop-verify.sh
+          ./scripts/devloop-verify.sh "$PKG"
       - name: Report (observe mode)
         if: failure()
         run: echo "::warning::Loop verify failed — observe mode, not blocking merge yet"
@@ -732,7 +732,7 @@ Add note: Stage 1 CI reports failures as warnings; Stage 2 makes check required.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .github/workflows/loop-verify.yml README.md
+git add .github/workflows/devloop-verify.yml README.md
 git commit -m "ci: add loop-verify workflow in observe mode"
 ```
 
@@ -770,7 +770,7 @@ Read and follow the source skill file in this repository. Do not use this pointe
 Sections:
 1. What is Develop Loop
 2. Four success pillars (phase quality, orchestration, 3-level quality, traceability)
-3. Quick start: `/loop start FEAT-002`, `/loop run FEAT-002`
+3. Quick start: `/devloop start FEAT-002`, `/devloop run FEAT-002`
 4. Standalone phase skill usage
 5. Install for Cursor / Codex / Claude Code
 6. MVP scope vs Phase 2
@@ -794,7 +794,7 @@ git commit -m "docs: add Cursor skill pointers and complete README"
 
 ```bash
 # Structural L3
-./scripts/loop-verify.sh FEAT-001
+./scripts/devloop-verify.sh FEAT-001
 
 # Skill files exist
 test -f .ai/skills/lifecycle-loop/SKILL.md
@@ -840,7 +840,7 @@ Not in this plan's execution scope. Track as follow-up:
 | 07-release-retro skill | `.ai/skills/phases/07-release-retro/SKILL.md` |
 | routine + high_risk profiles | `.ai/config/profiles.yaml` |
 | Parent-child packages | lifecycle-loop reference + package.yaml schema |
-| CI enforce mode | `.github/workflows/loop-verify.yml` branch protection |
+| CI enforce mode | `.github/workflows/devloop-verify.yml` branch protection |
 
 ---
 

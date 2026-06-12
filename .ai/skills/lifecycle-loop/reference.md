@@ -3,12 +3,12 @@
 ## Command cheat sheet
 
 ```text
-/loop start FEAT-003          # create package + classify
-/loop run FEAT-003            # E2E loop mode
-/loop run FEAT-003 --pipeline # single pass
-/loop gate FEAT-003 design    # gate one phase
-/loop status FEAT-003         # status summary
-/loop classify FEAT-003       # re-classify
+/devloop start FEAT-003          # create package + classify
+/devloop run FEAT-003            # E2E loop mode
+/devloop run FEAT-003 --pipeline # single pass
+/devloop gate FEAT-003 design    # gate one phase
+/devloop status FEAT-003         # status summary
+/devloop classify FEAT-003       # re-classify
 ```
 
 ## Profile summary
@@ -97,5 +97,5 @@ Blocking: AC-002 not referenced in architecture.md
 Re-entry budget exhausted (max_reentry: 3)
 
 Action: Human must revise design or waive.
-Next: /loop gate FEAT-003 design (after fix)
+Next: /devloop gate FEAT-003 design (after fix)
 ```

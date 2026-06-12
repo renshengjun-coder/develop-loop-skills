@@ -2,7 +2,8 @@
 name: lifecycle-loop
 description: >-
   Orchestrates end-to-end SDLC for a change package. Read source skill at
-  .ai/skills/lifecycle-loop/SKILL.md. Use for /loop start, /loop run, /loop gate.
+  .ai/skills/lifecycle-loop/SKILL.md. Use for /devloop start, /devloop run, /devloop gate,
+  /devloop status, /devloop classify.
 ---
 
 # Lifecycle Loop

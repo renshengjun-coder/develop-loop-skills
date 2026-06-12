@@ -3,7 +3,7 @@ name: 01-requirement
 description: >-
   Produces PRD, user stories, acceptance criteria, risks, and boundaries for a
   feature package. Runs L1 self-check and archive. Use for requirements phase,
-  PRD, user stories, acceptance criteria — standalone or via /loop. Does not
+  PRD, user stories, acceptance criteria — standalone or via /devloop. Does not
   issue final gate PASS.
 ---
 
@@ -17,7 +17,7 @@ Fully owns the **requirements phase** for a change package. Runnable standalone 
 - Feature description, constraints, stakeholders from user
 - Read `.ai/config/profiles.yaml` for `human_gates` (standard profile: human gate at requirements)
 
-If `package.yaml` does not exist and user did not run `/loop start`, create artifact folder only or ask user to run `/loop start <id>` first.
+If `package.yaml` does not exist and user did not run `/devloop start`, create artifact folder only or ask user to run `/devloop start <id>` first.
 
 ## Step 1: Generate
 

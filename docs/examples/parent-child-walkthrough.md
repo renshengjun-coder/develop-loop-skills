@@ -6,10 +6,10 @@
 ## 1. Create both packages
 
 ```text
-/loop start FEAT-CHILD
+/devloop start FEAT-CHILD
 # Classify as standard; child completes requirements → design → test-plan only (MVP scope)
 
-/loop start FEAT-PARENT
+/devloop start FEAT-PARENT
 # Classify as standard; parent runs full 7-phase profile
 ```
 
@@ -24,7 +24,7 @@ children:
 ## 2. Complete child loop
 
 ```text
-/loop run FEAT-CHILD
+/devloop run FEAT-CHILD
 ```
 
 Child progression:
@@ -38,16 +38,16 @@ Each phase archives with L1 `review-log.md` and L2 gate pass. Child ends at `sta
 Verify child:
 
 ```bash
-./scripts/loop-verify.sh FEAT-CHILD
+./scripts/devloop-verify.sh FEAT-CHILD
 ```
 
 ## 3. Run parent release gate
 
 ```text
-/loop run FEAT-PARENT
+/devloop run FEAT-PARENT
 # Parent progresses through all profile phases through test-report
 
-/loop gate FEAT-PARENT release
+/devloop gate FEAT-PARENT release
 ```
 
 Lifecycle-loop checks **child readiness** before parent release gate passes:
@@ -81,6 +81,6 @@ Child FEAT-CHILD not ready: test-plan phase not archived
 ## Verify
 
 ```bash
-./scripts/loop-verify.sh FEAT-CHILD
-./scripts/loop-verify.sh FEAT-PARENT
+./scripts/devloop-verify.sh FEAT-CHILD
+./scripts/devloop-verify.sh FEAT-PARENT
 ```

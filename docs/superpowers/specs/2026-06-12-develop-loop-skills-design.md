@@ -106,7 +106,7 @@ The loop skill must reliably:
 
 | Section | Purpose |
 |---------|---------|
-| Commands | `/loop start|run|gate|status|classify` |
+| Commands | `/devloop start|run|gate|status|classify` |
 | Classify steps | Rule table, human confirm/override, write `classification.yaml` |
 | Execution steps | Agent turn-by-turn orchestration (§5.4) |
 | Gate steps | L2 checklist, gate file template, pass/fail/stale rules |
@@ -140,8 +140,8 @@ Both modes are first-class — the loop skill must implement each correctly.
 
 | Mode | Command | Behavior | Success signal |
 |------|---------|----------|----------------|
-| **Loop** | `/loop run <id>` | Auto re-enter failed phases up to `max_reentry`; agent self-drives to completion or escalation | E2E feature completes with gate history showing re-entry attempts |
-| **Pipeline** | `/loop run <id> --pipeline` | Single pass per phase; stop on first gate fail; human fixes between runs | Clean stop with actionable gate report; resume picks up from failed phase |
+| **Loop** | `/devloop run <id>` | Auto re-enter failed phases up to `max_reentry`; agent self-drives to completion or escalation | E2E feature completes with gate history showing re-entry attempts |
+| **Pipeline** | `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail; human fixes between runs | Clean stop with actionable gate report; resume picks up from failed phase |
 
 Mode is stored in `package.yaml` and respected on every run. Switching mode mid-package is explicit (user command), not silent.
 
@@ -180,8 +180,8 @@ Every skill — phase and loop — is a **runtime-neutral AI coding agent skill*
   - Cursor: `.cursor/skills/<name>/SKILL.md`
   - Codex: per project `AGENTS.md` + skills path convention
   - Claude Code: `.claude/skills/<name>/SKILL.md`
-- **Executable separately** — user can invoke `01-requirement-skill` for `FEAT-001` without ever running `/loop run`
-- **Executable orchestrated** — `/loop run` tells the agent when to load which phase skill
+- **Executable separately** — user can invoke `01-requirement-skill` for `FEAT-001` without ever running `/devloop run`
+- **Executable orchestrated** — `/devloop run` tells the agent when to load which phase skill
 
 No runtime-specific logic inside phase content. Runtime folders contain pointers or copies of the same `SKILL.md`.
 
@@ -233,7 +233,7 @@ Level 3 — Lightweight CI
 
 ### 3.3 Complexity classification and profiles
 
-At `/loop start <id>`, the loop skill classifies and writes `classification.yaml`:
+At `/devloop start <id>`, the loop skill classifies and writes `classification.yaml`:
 
 | Tier | Typical signals |
 |------|-----------------|
@@ -335,12 +335,12 @@ Single orchestrator. **Does not author phase artifacts by default.** Instructs t
 
 | Command | Behavior |
 |---------|----------|
-| `/loop start <id>` | Create package, classify, select profile, show plan |
-| `/loop run <id>` | E2E, loop mode (default) |
-| `/loop run <id> --pipeline` | Single pass, no auto re-entry |
-| `/loop gate <id> <phase>` | L2 gate for one phase |
-| `/loop status <id>` | Summarize package, gates, blockers |
-| `/loop classify <id>` | Re-run or confirm classification |
+| `/devloop start <id>` | Create package, classify, select profile, show plan |
+| `/devloop run <id>` | E2E, loop mode (default) |
+| `/devloop run <id> --pipeline` | Single pass, no auto re-entry |
+| `/devloop gate <id> <phase>` | L2 gate for one phase |
+| `/devloop status <id>` | Summarize package, gates, blockers |
+| `/devloop classify <id>` | Re-run or confirm classification |
 
 ### 5.3 SKILL.md structure
 
@@ -476,7 +476,7 @@ develop-loop-skills/
 
 | Priority | Item |
 |----------|------|
-| P0 | `lifecycle-loop` skill with `/loop` commands |
+| P0 | `lifecycle-loop` skill with `/devloop` commands |
 | P0 | `01-requirement`, `02-design`, `03-test-plan` — **high-quality, standalone** |
 | P0 | `traceability` skill |
 | P0 | `profiles.yaml` (standard, 3 phases) |
@@ -493,8 +493,8 @@ develop-loop-skills/
 
 **Orchestration + 3-level quality**
 
-2. `/loop start` + `/loop run` (loop mode) completes requirements → design → test-plan with L1 review-logs, L2 gate files, and updated `package.yaml`.
-3. `/loop run <id> --pipeline` stops on first gate fail with a clear report; resume after fix succeeds.
+2. `/devloop start` + `/devloop run` (loop mode) completes requirements → design → test-plan with L1 review-logs, L2 gate files, and updated `package.yaml`.
+3. `/devloop run <id> --pipeline` stops on first gate fail with a clear report; resume after fix succeeds.
 4. Re-entry works in loop mode: fail design gate → revise → pass on retry; gate history shows multiple attempts.
 5. L3 `loop-verify.sh` reports structural gaps without running an LLM.
 
@@ -528,18 +528,18 @@ Root `AGENTS.md`:
 ```markdown
 ## Develop Loop
 
-- Orchestrator: `.ai/skills/lifecycle-loop/SKILL.md` — `/loop start|run|gate|status`
+- Orchestrator: `.ai/skills/lifecycle-loop/SKILL.md` — `/devloop start|run|gate|status`
 - Phases: `.ai/skills/phases/*/SKILL.md` — invokable standalone
 - State: `.ai/packages/<id>/` · Artifacts: `artifacts/<id>/`
 ```
 
-**Standalone rule:** Every phase `SKILL.md` must open with standalone usage, e.g. “Use when user asks for requirements, PRD, user stories, or acceptance criteria for a feature — with or without `/loop`.”
+**Standalone rule:** Every phase `SKILL.md` must open with standalone usage, e.g. “Use when user asks for requirements, PRD, user stories, or acceptance criteria for a feature — with or without `/devloop`.”
 
 ---
 
 ## 10. Light CI (L3)
 
-`scripts/loop-verify.sh` checks:
+`scripts/devloop-verify.sh` checks:
 
 1. `package.yaml` and `classification.yaml` exist
 2. Archived phases have required artifacts + `review-log.md`

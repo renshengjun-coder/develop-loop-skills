@@ -15,7 +15,7 @@
 **routine** — bug fix in email template only:
 
 ```text
-/loop classify FEAT-003
+/devloop classify FEAT-003
 # Signals: bug fix, single-file change
 # Result: active_profile: routine → phases skip design and test-plan
 ```
@@ -23,7 +23,7 @@
 **standard** — FEAT-003 (this package):
 
 ```text
-/loop classify FEAT-003
+/devloop classify FEAT-003
 # Signals: feature, limited blast radius
 # Result: active_profile: standard → all 7 phases
 ```
@@ -31,7 +31,7 @@
 **high_risk** — if shipment email touched PII or payment:
 
 ```text
-/loop classify FEAT-003
+/devloop classify FEAT-003
 # Signals: PII in email content, compliance
 # Result: active_profile: high_risk → human gates at requirements, design, test-plan, code-review, test-report, release
 ```
@@ -51,8 +51,8 @@ Trace matrix: `traceability/FEAT-003/matrix.md` — code column filled for AC-00
 ## Verify
 
 ```bash
-./scripts/loop-verify.sh FEAT-003
-./scripts/loop-verify.sh --enforce FEAT-003
+./scripts/devloop-verify.sh FEAT-003
+./scripts/devloop-verify.sh --enforce FEAT-003
 ```
 
 ## Phase 2 acceptance checklist
@@ -63,6 +63,6 @@ Trace matrix: `traceability/FEAT-003/matrix.md` — code column filled for AC-00
 | routine profile skips design/test-plan | Classify example above |
 | high_risk human gates | `profiles.yaml` human_gates |
 | Parent-child gate | FEAT-PARENT `gates/release-1.md` |
-| CI enforce | `.github/workflows/loop-verify.yml` |
+| CI enforce | `.github/workflows/devloop-verify.yml` |
 | Code in trace matrix | `traceability/FEAT-003/matrix.md` |
 | FEAT-001 MVP unchanged | `loop-verify.sh FEAT-001` PASS |

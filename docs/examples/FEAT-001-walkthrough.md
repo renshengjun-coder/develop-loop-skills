@@ -17,11 +17,11 @@ PRD.md (v1, approved)
 ## Loop mode E2E (equivalent steps)
 
 ```text
-/loop start FEAT-001
+/devloop start FEAT-001
   → classification.yaml (standard)
   → package.yaml created
 
-/loop run FEAT-001
+/devloop run FEAT-001
   → 01-requirement-skill → gate requirements → pass
   → 02-design-skill → gate design → pass
   → 03-test-plan-skill → gate test-plan → pass
@@ -30,9 +30,9 @@ PRD.md (v1, approved)
 
 ## Pipeline mode (narrative)
 
-1. `/loop run FEAT-001 --pipeline` runs requirements → gate pass → design → gate **fail** (e.g. missing AC-002 in architecture).
+1. `/devloop run FEAT-001 --pipeline` runs requirements → gate pass → design → gate **fail** (e.g. missing AC-002 in architecture).
 2. Loop stops with gate report; user fixes `architecture.md`.
-3. `/loop gate FEAT-001 design` → pass; resume `/loop run FEAT-001 --pipeline` from test-plan.
+3. `/devloop gate FEAT-001 design` → pass; resume `/devloop run FEAT-001 --pipeline` from test-plan.
 
 ## Re-entry example (loop mode)
 
@@ -46,7 +46,7 @@ Design gate fail on attempt 1 → design-skill re-invoked with findings → `gat
 | Loop E2E L1+L2 | `review-log.md` + `gates/*.md` |
 | Pipeline stop/resume | Narrative above |
 | Re-entry | Supported by loop skill; demo shows single-pass |
-| L3 verify | `./scripts/loop-verify.sh FEAT-001` |
+| L3 verify | `./scripts/devloop-verify.sh FEAT-001` |
 | Trace matrix | `traceability/FEAT-001/matrix.md` |
 | Gate artifacts_checked | Gate files list real paths |
 | Audit from Git | This walkthrough + linked files |

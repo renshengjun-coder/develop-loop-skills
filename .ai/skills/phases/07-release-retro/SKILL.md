@@ -2,7 +2,7 @@
 name: 07-release-retro
 description: >-
   Use when a package needs release notes, known issues, retrospective, rollback
-  planning, ship, deploy, or release phase closure — standalone or via /loop.
+  planning, ship, deploy, or release phase closure — standalone or via /devloop.
   Does not issue final gate PASS.
 ---
 

@@ -3,8 +3,8 @@ name: lifecycle-loop
 description: >-
   Orchestrates end-to-end SDLC for a change package. Classifies complexity,
   selects workflow profile, invokes phase skills, issues L2 gate decisions,
-  controls loop/pipeline re-entry. Use for /loop start, /loop run, /loop gate,
-  /loop status, /loop classify, lifecycle, SDLC loop, quality gate.
+  controls loop/pipeline re-entry. Use for /devloop start, /devloop run, /devloop gate,
+  /devloop status, /devloop classify, lifecycle, SDLC loop, quality gate.
 ---
 
 # Lifecycle Loop Skill
@@ -13,14 +13,16 @@ Universal orchestrator for the Develop Loop SDLC. **Does not author phase artifa
 
 ## Commands
 
+User-facing slash command is **`/devloop`** (not `/loop`) to avoid colliding with built-in agent commands such as Cursor's recurring `/loop`.
+
 | Command | Behavior |
 |---------|----------|
-| `/loop start <id>` | Create package from `_template`, classify, select profile, show execution plan |
-| `/loop run <id>` | Full E2E in **loop** mode (default); auto re-entry on gate fail |
-| `/loop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
-| `/loop gate <id> <phase>` | L2 gate check for one phase only; reject if `<phase>` is not in `active_profile` phases unless user explicitly overrides |
-| `/loop status <id>` | Summarize `package.yaml`, gates, blockers, phase readiness |
-| `/loop classify <id>` | Re-run or confirm classification; update `classification.yaml` |
+| `/devloop start <id>` | Create package from `_template`, classify, select profile, show execution plan |
+| `/devloop run <id>` | Full E2E in **loop** mode (default); auto re-entry on gate fail |
+| `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
+| `/devloop gate <id> <phase>` | L2 gate check for one phase only; reject if `<phase>` is not in `active_profile` phases unless user explicitly overrides |
+| `/devloop status <id>` | Summarize `package.yaml`, gates, blockers, phase readiness |
+| `/devloop classify <id>` | Re-run or confirm classification; update `classification.yaml` |
 
 **Mode:** Read from command flag or `package.yaml` field `mode: loop | pipeline`. Switching mode mid-run requires explicit user command.
 
@@ -32,7 +34,7 @@ Universal orchestrator for the Develop Loop SDLC. **Does not author phase artifa
 4. Write `.ai/packages/<id>/classification.yaml` with `suggested_tier`, `active_profile`, `signals`, `confidence`, and `override` if any.
 5. Do not proceed to execution until `active_profile` is set.
 
-After confirm, set `active_profile` to the confirmed tier (`routine`, `standard`, or `high_risk`). Write matching `profile` field in `package.yaml`. Show the user the phase list and human gates from `profiles.yaml` for that profile before first `/loop run`.
+After confirm, set `active_profile` to the confirmed tier (`routine`, `standard`, or `high_risk`). Write matching `profile` field in `package.yaml`. Show the user the phase list and human gates from `profiles.yaml` for that profile before first `/devloop run`.
 
 ### Classification rule table
 
@@ -152,8 +154,8 @@ Never set `result: pass` with unchecked checklist items or open blocking finding
 
 | Mode | Command | On gate fail |
 |------|---------|--------------|
-| **Loop** (default) | `/loop run <id>` | Re-invoke phase skill up to `max_reentry`, then escalate |
-| **Pipeline** | `/loop run <id> --pipeline` | Stop immediately; user fixes and re-runs |
+| **Loop** (default) | `/devloop run <id>` | Re-invoke phase skill up to `max_reentry`, then escalate |
+| **Pipeline** | `/devloop run <id> --pipeline` | Stop immediately; user fixes and re-runs |
 
 Store mode in `package.yaml`. Respect it on every run.
 
@@ -177,7 +179,7 @@ Stop auto-retry and report to the user when:
 - Phase skill returns `error` (tool failure, missing context)
 - User requests waiver → write `.ai/packages/<id>/decisions/waiver-<id>.md` with reason + approver; gate stays `fail`, progression is explicit only
 
-Escalation report must list: open findings, gate attempt history, suggested human actions, next command (`/loop gate`, `/loop run`, or manual phase skill).
+Escalation report must list: open findings, gate attempt history, suggested human actions, next command (`/devloop gate`, `/devloop run`, or manual phase skill).
 
 ## Parent-Child Packages
 
@@ -205,7 +207,7 @@ children:
 
 - Do not copy child artifacts into parent `artifacts/` folder.
 - Parent PRD may reference child IDs in scope; traceability stays per-package.
-- Child packages run `/loop run` independently; parent `/loop run` checks children only at gate time.
+- Child packages run `/devloop run` independently; parent `/devloop run` checks children only at gate time.
 
 ## Constraints
 

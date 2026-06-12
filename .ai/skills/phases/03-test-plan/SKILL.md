@@ -3,7 +3,7 @@ name: 03-test-plan
 description: >-
   Produces test strategy, test cases, edge cases, and regression set mapped to
   acceptance criteria. L1 self-check and archive. Use for test plan, test strategy,
-  test cases, QA plan, coverage map — standalone or via /loop. Does not issue
+  test cases, QA plan, coverage map — standalone or via /devloop. Does not issue
   final gate PASS.
 ---
 

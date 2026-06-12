@@ -3,7 +3,7 @@ name: 02-design
 description: >-
   Produces architecture, API design, data model, tradeoffs, and failure scenarios
   from approved requirements. L1 self-check and archive. Use for design phase,
-  architecture, API design, data model, system design — standalone or via /loop.
+  architecture, API design, data model, system design — standalone or via /devloop.
   Does not issue final gate PASS.
 ---
 
