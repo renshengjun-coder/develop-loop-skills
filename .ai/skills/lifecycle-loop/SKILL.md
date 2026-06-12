@@ -18,7 +18,7 @@ Universal orchestrator for the Develop Loop SDLC. **Does not author phase artifa
 | `/loop start <id>` | Create package from `_template`, classify, select profile, show execution plan |
 | `/loop run <id>` | Full E2E in **loop** mode (default); auto re-entry on gate fail |
 | `/loop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
-| `/loop gate <id> <phase>` | L2 gate check for one phase only (no phase invocation unless needed) |
+| `/loop gate <id> <phase>` | L2 gate check for one phase only; reject if `<phase>` is not in `active_profile` phases unless user explicitly overrides |
 | `/loop status <id>` | Summarize `package.yaml`, gates, blockers, phase readiness |
 | `/loop classify <id>` | Re-run or confirm classification; update `classification.yaml` |
 
@@ -32,7 +32,7 @@ Universal orchestrator for the Develop Loop SDLC. **Does not author phase artifa
 4. Write `.ai/packages/<id>/classification.yaml` with `suggested_tier`, `active_profile`, `signals`, `confidence`, and `override` if any.
 5. Do not proceed to execution until `active_profile` is set.
 
-**MVP:** After confirm, set `active_profile: standard` (only active profile in `.ai/config/profiles.yaml`).
+After confirm, set `active_profile` to the confirmed tier (`routine`, `standard`, or `high_risk`). Write matching `profile` field in `package.yaml`. Show the user the phase list and human gates from `profiles.yaml` for that profile before first `/loop run`.
 
 ### Classification rule table
 
@@ -68,6 +68,7 @@ You are driving the SDLC loop for one package. Follow these steps in order. **Re
 2. Load `active_profile` from `classification.yaml` and read `.ai/config/profiles.yaml` for `phases`, `human_gates`, `max_reentry`.
 3. If this phase is `archived` and its latest gate is `pass`, skip to the next phase.
 4. If an upstream `artifact_version` changed since the last gate for this phase, mark downstream phases `pending` in `package.yaml`, treat affected gates as `stale`, and return to the earliest affected phase.
+5. Load `phases` list for `active_profile` from `profiles.yaml`. **Skip** phases not in the profile (e.g. `routine` skips `design` and `test-plan`). Do not gate skipped phases.
 
 ### Run the phase
 
@@ -85,18 +86,23 @@ You are driving the SDLC loop for one package. Follow these steps in order. **Re
    - **loop** mode: if re-entry count for this phase is below `max_reentry`, invoke the same phase skill with gate findings as revision input, then gate again.
    - If re-entry budget exhausted → follow **Escalation Steps** and stop.
 
-### After all phases pass
+### After all profile phases pass
 
-1. Set `package.yaml` `status: ready_for_merge` (or `ready_for_release` when release phase exists).
-2. Summarize: phases completed, gate history, human approvals, open blockers.
+1. If profile includes `release` and release gate passes → set `package.yaml` `status: ready_for_release`
+2. Else if all profile phases pass → set `package.yaml` `status: ready_for_merge`
+3. Summarize: phases completed, gate history, human approvals, open blockers.
 
 ### Phase skill path map
 
-| Phase key | Skill path |
-|-----------|------------|
-| requirements | `.ai/skills/phases/01-requirement/SKILL.md` |
-| design | `.ai/skills/phases/02-design/SKILL.md` |
-| test-plan | `.ai/skills/phases/03-test-plan/SKILL.md` |
+| Phase key | Skill path | Artifact dir |
+|-----------|------------|--------------|
+| requirements | `.ai/skills/phases/01-requirement/SKILL.md` | `01-requirements` |
+| design | `.ai/skills/phases/02-design/SKILL.md` | `02-design` |
+| test-plan | `.ai/skills/phases/03-test-plan/SKILL.md` | `03-test-plan` |
+| implementation | `.ai/skills/phases/04-implementation/SKILL.md` | `04-implementation` |
+| code-review | `.ai/skills/phases/05-code-review/SKILL.md` | `05-code-review` |
+| test-report | `.ai/skills/phases/06-test-report/SKILL.md` | `06-test-report` |
+| release | `.ai/skills/phases/07-release-retro/SKILL.md` | `07-release-retro` |
 
 ## Gate Steps
 
@@ -173,9 +179,33 @@ Stop auto-retry and report to the user when:
 
 Escalation report must list: open findings, gate attempt history, suggested human actions, next command (`/loop gate`, `/loop run`, or manual phase skill).
 
-## Parent-Child Packages (Phase 2)
+## Parent-Child Packages
 
-When `package.yaml` lists `children`, parent release/design gates must verify each child's `package.yaml` shows required phases `archived` with passing latest gate. Do not copy child artifacts into parent.
+A parent package coordinates multiple child packages without copying artifacts.
+
+### package.yaml schema
+
+```yaml
+children:
+  - id: FEAT-CHILD-001
+    relationship: implements   # implements | depends_on
+```
+
+### Before parent release or design gate (when children exist)
+
+1. Read each `children[].id` → load `.ai/packages/<child_id>/package.yaml`.
+2. Load each child's `profile` from `package.yaml` (or `classification.yaml` if package profile is unset).
+3. **Child readiness:** each child must have every phase **listed in that child's `package.yaml`** `archived` with latest gate `result: pass`. A child may run a subset of its profile phases (e.g. 3-phase MVP child under `standard` profile); only phases present in the child's manifest are checked.
+4. If any child fails readiness → parent gate `result: fail` with finding listing child id and missing phase.
+5. Parent gate `artifacts_checked` includes child package paths:
+   - `.ai/packages/<child_id>/package.yaml`
+   - `.ai/packages/<child_id>/gates/<latest-pass-per-phase>`
+
+### Constraints
+
+- Do not copy child artifacts into parent `artifacts/` folder.
+- Parent PRD may reference child IDs in scope; traceability stays per-package.
+- Child packages run `/loop run` independently; parent `/loop run` checks children only at gate time.
 
 ## Constraints
 
