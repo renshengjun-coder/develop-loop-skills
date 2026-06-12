@@ -1,0 +1,16 @@
+id: FEAT-CHILD
+owner: demo
+profile: standard
+mode: loop
+status: ready_for_merge
+phases:
+  requirements:
+    status: archived
+    artifact_version: v1
+  design:
+    status: archived
+    artifact_version: v1
+  test-plan:
+    status: archived
+    artifact_version: v1
+children: []

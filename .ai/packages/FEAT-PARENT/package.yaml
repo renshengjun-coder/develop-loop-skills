@@ -1,0 +1,30 @@
+id: FEAT-PARENT
+owner: demo
+profile: standard
+mode: loop
+status: ready_for_release
+phases:
+  requirements:
+    status: archived
+    artifact_version: v1
+  design:
+    status: archived
+    artifact_version: v1
+  test-plan:
+    status: archived
+    artifact_version: v1
+  implementation:
+    status: archived
+    artifact_version: v1
+  code-review:
+    status: archived
+    artifact_version: v1
+  test-report:
+    status: archived
+    artifact_version: v1
+  release:
+    status: archived
+    artifact_version: v1
+children:
+  - id: FEAT-CHILD
+    relationship: implements
