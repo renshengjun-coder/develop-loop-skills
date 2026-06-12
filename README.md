@@ -6,68 +6,186 @@ AI-native SDLC loop skills for Cursor, Codex, and Claude Code.
 
 Develop Loop turns coding agents into **engineering process executors** — producing reviewable, versioned, traceable artifacts across the full SDLC.
 
-## Install
+The skill set is distributed in **two layers**:
 
-### 1. Global skills (once per machine)
+| Layer | What | Where |
+|-------|------|-------|
+| **Global skills** | Agent behavior — orchestrator + 7 phase skills + traceability | `~/.cursor/skills/`, `~/.claude/skills/`, `~/.codex/AGENTS.md` |
+| **Project scaffold** | Repo state — config, templates, verify scripts, artifact dirs | `.ai/`, `artifacts/`, `traceability/`, `AGENTS.md` |
 
-From a clone of this repo (or after `npm i -g @develop-loop/skills`):
+Process evidence (PRD, design, gates) lives in `artifacts/`. Application code stays in your normal repo paths (`src/`, `tests/`, etc.) and is linked via `changed-files.md` and the trace matrix.
+
+---
+
+## Package (maintainers)
+
+The distributable is built from this repo into `pack/` (gitignored). It is **not** committed — consumers get it via `devloop` CLI or npm.
+
+### Build the pack
 
 ```bash
-./scripts/build-pack.sh   # auto-run by bin/devloop if pack/ missing
+./scripts/build-pack.sh
+```
+
+Produces:
+
+```text
+pack/
+  VERSION                 # e.g. 0.3.0 (from repo VERSION file)
+  skills/                 # 9 self-contained SKILL.md trees
+    lifecycle-loop/
+    01-requirement/ … 07-release-retro/
+    traceability/
+  templates/              # copied into target projects by devloop init
+    .ai/config/profiles.yaml
+    .ai/packages/_template/
+    scripts/loop-verify.sh
+    AGENTS.md
+    .cursor/rules/devloop.mdc
+    .github/workflows/loop-verify.yml  (optional via --with-ci)
+```
+
+Source of truth for skills remains `.ai/skills/` in this repo. `build-pack.sh` copies them into `pack/skills/` for distribution.
+
+### Verify the pack
+
+```bash
+./scripts/test-build-pack.sh      # layout: 9 skills + templates
+./scripts/test-devloop-cli.sh     # install + init + doctor in temp dirs
+./scripts/test-loop-verify.sh     # L3 verifier regression
+```
+
+Or run all via npm:
+
+```bash
+npm test
+```
+
+### Release checklist
+
+1. Bump `VERSION` (and `package.json` `version` to match).
+2. Run `npm test`.
+3. Tag and publish (tarball from repo clone, or `npm publish` when configured).
+
+Design: `docs/superpowers/specs/2026-06-12-devloop-packaging-design.md`
+
+---
+
+## Install (consumers)
+
+### Option A — from a git clone (recommended today)
+
+```bash
+git clone https://github.com/renshengjun-coder/develop-loop-skills.git
+cd develop-loop-skills
+
+# 1. Global skills (once per machine)
 ./bin/devloop install --global
-```
 
-Installs 9 skills to `~/.cursor/skills/`, `~/.claude/skills/`, and a Develop Loop block in `~/.codex/AGENTS.md`.
-
-### 2. Project scaffold (once per repo)
-
-In your application repository (new or existing):
-
-```bash
+# 2. Project scaffold (once per app repo)
+cd /path/to/my-app
 /path/to/develop-loop-skills/bin/devloop init
-# optional: devloop init --with-ci
+# optional CI workflow:
+/path/to/develop-loop-skills/bin/devloop init --with-ci
+
+# 3. Verify
+/path/to/develop-loop-skills/bin/devloop doctor
 ```
 
-Creates `.ai/config/`, package template, `scripts/loop-verify.sh`, `AGENTS.md`, `artifacts/`, `traceability/`.
+`bin/devloop` runs `build-pack.sh` automatically if `pack/` is missing.
 
-### 3. Verify
+### Option B — npm (when published)
 
 ```bash
+npm i -g @develop-loop/skills
+devloop install --global
+cd my-app && devloop init --with-ci
 devloop doctor
 ```
+
+### Install targets per runtime
+
+| Runtime | Global (`devloop install --global`) | Project (`devloop init`) |
+|---------|-------------------------------------|---------------------------|
+| **Cursor** | `~/.cursor/skills/<skill>/SKILL.md` | `.cursor/rules/devloop.mdc`, merged `AGENTS.md` |
+| **Claude Code** | `~/.claude/skills/<skill>/SKILL.md` | merged `AGENTS.md` |
+| **Codex** | Develop Loop block in `~/.codex/AGENTS.md` | merged `AGENTS.md` |
+
+Limit runtimes: `devloop install --global --runtimes cursor,claude`
 
 ### Upgrade
 
 ```bash
-devloop install --global --upgrade
-devloop init --upgrade
+devloop install --global --upgrade   # refresh global skills
+devloop init --upgrade               # refresh project templates (never touches artifacts/ or packages/<id>/)
 ```
 
-**Developing this repo** still uses `.ai/skills/` as source of truth and `.cursor/skills/` as thin pointers for dogfooding.
-
-## Commands
-
-Orchestrator slash command: **`/devloop`** (avoids collision with agent built-ins like Cursor's `/loop`).
+### `devloop` CLI reference
 
 | Command | Description |
 |---------|-------------|
-| `/devloop start <id>` | Create package, classify, select profile |
+| `devloop install --global` | Copy 9 skills to user-level agent dirs |
+| `devloop install --global --upgrade` | Overwrite global skills with current pack version |
+| `devloop install --global --runtimes cursor,claude,codex` | Limit install targets |
+| `devloop init` | Scaffold project (idempotent; skips existing files) |
+| `devloop init --with-ci` | Also add `.github/workflows/loop-verify.yml` |
+| `devloop init --upgrade` | Refresh templates and verify scripts |
+| `devloop init --force` | Overwrite template files (prompts for confirmation) |
+| `devloop doctor` | Check global skills + project scaffold |
+
+---
+
+## Use (in your project)
+
+After **global install** + **project init**, open your app repo in Cursor, Claude Code, or Codex.
+
+### Quick start
+
+```text
+/devloop start FEAT-001          # create package, classify, pick profile
+/devloop run FEAT-001            # E2E loop (auto re-entry on gate fail)
+/devloop status FEAT-001         # package status and blockers
+```
+
+### Agent slash commands
+
+Orchestrator: **`/devloop`** (not `/loop` — avoids Cursor built-in collision).
+
+| Command | Description |
+|---------|-------------|
+| `/devloop start <id>` | Create package from template, classify, select profile |
 | `/devloop run <id>` | E2E orchestration (loop mode) |
-| `/devloop run <id> --pipeline` | Single pass per phase |
+| `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase |
-| `/devloop status <id>` | Package status and blockers |
+| `/devloop status <id>` | Summarize package, gates, blockers |
 | `/devloop classify <id>` | Re-run or confirm complexity classification |
 
-All 7 phase skills are invokable **standalone** without the loop.
+### Standalone phase skills
 
-## Shipped (Phase 2)
+You do not need `/devloop run` for every task. Invoke phase skills directly, e.g.:
 
-- **7 phase skills:** requirements through release-retro
-- **3 profiles:** `routine`, `standard`, `high_risk`
-- **Parent-child packages:** orchestration in lifecycle-loop
-- **CI enforce mode:** `--enforce` flag on `loop-verify.sh`
+- Requirements — PRD, user stories, acceptance criteria
+- Design — architecture, API design
+- Test plan — test strategy, test cases
+- Implementation — plan, code, `changed-files.md`
+- Code review — AI review artifacts
+- Test report — execution summary, coverage
+- Release & retro — release notes, retro
 
-## Demo packages
+Each phase writes to `artifacts/<id>/<phase-folder>/` and updates `.ai/packages/<id>/package.yaml`.
+
+### Where things live
+
+| What | Path |
+|------|------|
+| Change package manifest | `.ai/packages/<id>/package.yaml` |
+| Gate decisions (L2) | `.ai/packages/<id>/gates/` |
+| SDLC artifacts | `artifacts/<id>/` |
+| Trace matrix | `traceability/<id>/matrix.md` |
+| Workflow profiles | `.ai/config/profiles.yaml` |
+| Application code | Normal repo paths (`src/`, `lib/`, `tests/`, …) |
+
+### Example walkthroughs
 
 | Package | Scope |
 |---------|-------|
@@ -75,7 +193,29 @@ All 7 phase skills are invokable **standalone** without the loop.
 | FEAT-003 | Full 7-phase with code in trace matrix |
 | FEAT-PARENT / FEAT-CHILD | Parent-child release gate demo |
 
-Walkthroughs: `docs/examples/FEAT-001-walkthrough.md`, `docs/examples/FEAT-003-walkthrough.md`, `docs/examples/parent-child-walkthrough.md`
+See `docs/examples/FEAT-001-walkthrough.md`, `docs/examples/FEAT-003-walkthrough.md`, `docs/examples/parent-child-walkthrough.md`.
+
+---
+
+## Developing this repo
+
+This repository **dogfoods** the skills differently from consumer projects:
+
+- **Authoring:** `.ai/skills/` (source of truth)
+- **Cursor pointers:** `.cursor/skills/` (thin stubs → `.ai/skills/`)
+- **Demos:** `FEAT-001`, `FEAT-003`, etc. ship here for docs; `devloop init` does **not** copy them
+
+To work on skills here, edit `.ai/skills/` and use the pointer layout under `.cursor/skills/`. Run `./scripts/build-pack.sh` before testing the distributable CLI.
+
+---
+
+## Shipped features
+
+- **7 phase skills:** requirements through release-retro
+- **3 profiles:** `routine`, `standard`, `high_risk`
+- **Parent-child packages:** orchestration in lifecycle-loop
+- **Packaging CLI:** `bin/devloop` (global install + project init)
+- **CI enforce mode:** `--enforce` flag on `loop-verify.sh`
 
 ## 3-level quality model
 
@@ -85,19 +225,20 @@ Walkthroughs: `docs/examples/FEAT-001-walkthrough.md`, `docs/examples/FEAT-003-w
 | L2 | Lifecycle loop | `gates/<phase>-<n>.md` |
 | L3 | `loop-verify.sh` | Structural file checks (CI) |
 
-## Directory layout
+## Directory layout (consumer project after `devloop init`)
 
 ```text
 .ai/
   config/profiles.yaml
   packages/<id>/
-  skills/
 artifacts/<id>/
 traceability/<id>/
 scripts/loop-verify.sh
+AGENTS.md
+.devloop-version
 ```
 
-See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full design.
+Full SDLC design: `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md`
 
 ## Verify locally (L3)
 
@@ -107,4 +248,4 @@ See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full d
 ./scripts/test-loop-verify.sh
 ```
 
-CI runs `loop-verify` in **enforce mode** on pull requests (blocks merge when branch protection is configured).
+CI runs `loop-verify` in **enforce mode** on pull requests when branch protection is configured (`docs/ci/branch-protection.md`).
