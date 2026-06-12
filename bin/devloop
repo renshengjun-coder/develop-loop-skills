@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# bin/devloop — Develop Loop installer and project initializer
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export DEVLOOP_PKG_ROOT="$ROOT"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  devloop install --global [--upgrade] [--runtimes cursor,claude,codex]
+  devloop init [--with-ci] [--upgrade] [--force]
+  devloop doctor
+
+Environment:
+  DEVLOOP_HOME     Override user home for global install (testing)
+  DEVLOOP_PKG_ROOT Set package root (set automatically by bin/devloop)
+  DEVLOOP_YES=1    Auto-confirm --force prompts
+EOF
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+
+  if [[ ! -d "$ROOT/pack/skills" ]]; then
+    "$ROOT/scripts/build-pack.sh"
+  fi
+
+  case "$cmd" in
+    install)
+      # shellcheck source=bin/lib/install.sh
+      source "$ROOT/bin/lib/install.sh"
+      devloop_cmd_install "$@"
+      ;;
+    init)
+      # shellcheck source=bin/lib/init.sh
+      source "$ROOT/bin/lib/init.sh"
+      devloop_cmd_init "$@"
+      ;;
+    doctor)
+      # shellcheck source=bin/lib/doctor.sh
+      source "$ROOT/bin/lib/doctor.sh"
+      devloop_cmd_doctor "$@"
+      ;;
+    help|--help|-h|"")
+      usage
+      ;;
+    *)
+      echo "ERROR: unknown command: $cmd" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
