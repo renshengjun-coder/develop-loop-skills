@@ -55,3 +55,27 @@ scripts/loop-verify.sh
 ```
 
 See `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.md` for full design.
+
+## Verify locally (L3)
+
+```bash
+./scripts/loop-verify.sh FEAT-001
+./scripts/test-loop-verify.sh
+```
+
+CI runs `loop-verify` in **observe mode** (reports failures, does not block merge yet).
+
+## Demo package
+
+Walk through `FEAT-001` (ship notification email):
+
+- Package state: `.ai/packages/FEAT-001/`
+- Artifacts: `artifacts/FEAT-001/`
+- Walkthrough: `docs/examples/FEAT-001-walkthrough.md`
+
+## Phase 2 (not yet implemented)
+
+- Phase skills: implementation, code-review, test-report, release-retro
+- Profiles: routine, high_risk
+- Parent-child packages
+- CI enforce mode
