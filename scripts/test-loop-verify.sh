@@ -6,7 +6,7 @@ SCRIPT="$ROOT/scripts/loop-verify.sh"
 EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
 EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
 EVIDENCE_POLICY_MALFORMED_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.malformedbak"
-TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-GATEFAIL TEST-INCOMPLETE)
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
 TEMP_PACKAGE_INDEXES=()
 
 restore_policy() {
@@ -16,6 +16,87 @@ restore_policy() {
   if [[ -f "$EVIDENCE_POLICY_MALFORMED_BAK" ]]; then
     mv "$EVIDENCE_POLICY_MALFORMED_BAK" "$EVIDENCE_POLICY"
   fi
+}
+
+ensure_gate_binding() {
+  local gate_file="$1" binding="$2"
+  python3 - <<'PY' "$gate_file" "$binding"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+binding = sys.argv[2]
+text = path.read_text()
+line = f"  - {binding}\n"
+if line in text:
+    raise SystemExit(0)
+needle = "artifacts_checked:\n"
+if needle not in text:
+    raise SystemExit(f"missing artifacts_checked section in {path}")
+text = text.replace(needle, needle + line, 1)
+path.write_text(text)
+PY
+}
+
+remove_gate_binding() {
+  local gate_file="$1" binding="$2"
+  python3 - <<'PY' "$gate_file" "$binding"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+binding = sys.argv[2]
+text = path.read_text()
+line = f"  - {binding}\n"
+if line not in text:
+    raise SystemExit(f"missing expected gate binding to remove: {binding}")
+path.write_text(text.replace(line, "", 1))
+PY
+}
+
+replace_token_in_tree() {
+  local old_token="$1" new_token="$2"
+  shift 2
+  python3 - <<'PY' "$old_token" "$new_token" "$@"
+from pathlib import Path
+import sys
+
+old_token = sys.argv[1]
+new_token = sys.argv[2]
+for raw_path in sys.argv[3:]:
+    path = Path(raw_path)
+    if path.is_dir():
+        for child in sorted(p for p in path.rglob("*") if p.is_file()):
+            child.write_text(child.read_text().replace(old_token, new_token))
+    else:
+        path.write_text(path.read_text().replace(old_token, new_token))
+PY
+}
+
+copy_feat003_fixture() {
+  local dest_id="$1"
+  local package_dir="$ROOT/.ai/packages/$dest_id"
+  local artifacts_dir="$ROOT/artifacts/$dest_id"
+  local trace_dir="$ROOT/traceability/$dest_id"
+
+  mkdir -p "$package_dir"
+  cp "$ROOT/.ai/packages/FEAT-003/package.yaml" "$package_dir/package.yaml"
+  cp "$ROOT/.ai/packages/FEAT-003/classification.yaml" "$package_dir/classification.yaml"
+  cp -R "$ROOT/.ai/packages/FEAT-003/gates" "$package_dir/"
+  cp -R "$ROOT/artifacts/FEAT-003" "$artifacts_dir"
+  mkdir -p "$trace_dir"
+  cp "$ROOT/traceability/FEAT-003/matrix.md" "$trace_dir/matrix.md"
+  cat > "$trace_dir/package-evidence-index.md" <<EOF
+# Package Evidence Index — $dest_id
+EOF
+  TEMP_PACKAGE_INDEXES+=("$trace_dir/package-evidence-index.md")
+
+  replace_token_in_tree "FEAT-003" "$dest_id" \
+    "$package_dir/package.yaml" \
+    "$package_dir/classification.yaml" \
+    "$package_dir/gates" \
+    "$artifacts_dir" \
+    "$trace_dir/matrix.md"
 }
 
 cleanup_fixtures() {
@@ -253,7 +334,27 @@ mkdir -p "$ROOT/artifacts/TEST-NOMATRIX/01-requirements"
 for f in PRD.md user-stories.md acceptance-criteria.md review-log.md; do
   echo "status: approved" > "$ROOT/artifacts/TEST-NOMATRIX/01-requirements/$f"
 done
-echo "result: pass" > "$ROOT/.ai/packages/TEST-NOMATRIX/gates/requirements-1.md"
+cat > "$ROOT/.ai/packages/TEST-NOMATRIX/gates/requirements-1.md" <<'EOF'
+# Gate: requirements (attempt 1)
+
+result: pass
+profile: routine
+mode: loop
+
+artifacts_checked:
+  - artifacts/TEST-NOMATRIX/01-requirements/PRD.md (v1)
+  - artifacts/TEST-NOMATRIX/01-requirements/user-stories.md (v1)
+  - artifacts/TEST-NOMATRIX/01-requirements/acceptance-criteria.md (v1)
+  - artifacts/TEST-NOMATRIX/01-requirements/review-log.md
+
+checklist:
+  - [x] L1 self-review complete, no blocking failures
+  - [x] Required artifacts exist for profile
+
+findings: []
+reentry: 0
+next: implementation
+EOF
 output=$("$SCRIPT" TEST-NOMATRIX 2>&1) || { echo "FAIL: TEST-NOMATRIX should pass with warning"; exit 1; }
 echo "$output" | grep -q "WARN" || { echo "FAIL: TEST-NOMATRIX should warn without matrix"; exit 1; }
 if "$SCRIPT" --enforce TEST-NOMATRIX 2>/dev/null; then
@@ -280,7 +381,27 @@ mkdir -p "$ROOT/artifacts/TEST-NOINDEX/01-requirements"
 for f in PRD.md user-stories.md acceptance-criteria.md review-log.md; do
   echo "status: approved" > "$ROOT/artifacts/TEST-NOINDEX/01-requirements/$f"
 done
-echo "result: pass" > "$ROOT/.ai/packages/TEST-NOINDEX/gates/requirements-1.md"
+cat > "$ROOT/.ai/packages/TEST-NOINDEX/gates/requirements-1.md" <<'EOF'
+# Gate: requirements (attempt 1)
+
+result: pass
+profile: routine
+mode: loop
+
+artifacts_checked:
+  - artifacts/TEST-NOINDEX/01-requirements/PRD.md (v1)
+  - artifacts/TEST-NOINDEX/01-requirements/user-stories.md (v1)
+  - artifacts/TEST-NOINDEX/01-requirements/acceptance-criteria.md (v1)
+  - artifacts/TEST-NOINDEX/01-requirements/review-log.md
+
+checklist:
+  - [x] L1 self-review complete, no blocking failures
+  - [x] Required artifacts exist for profile
+
+findings: []
+reentry: 0
+next: implementation
+EOF
 mkdir -p "$ROOT/traceability/TEST-NOINDEX"
 cat > "$ROOT/traceability/TEST-NOINDEX/matrix.md" <<'EOF'
 # Traceability Matrix — TEST-NOINDEX
@@ -295,17 +416,24 @@ echo "$output" | grep -q "missing traceability/TEST-NOINDEX/package-evidence-ind
 }
 echo "PASS: package evidence index enforce check works"
 
-# Test 6: FEAT-003 passes when present
+# Test 6: copied FEAT-003 fixture passes when required contract bindings are present
 if [[ -d "$ROOT/.ai/packages/FEAT-003" ]]; then
-  if [[ ! -f "$ROOT/traceability/FEAT-003/package-evidence-index.md" ]]; then
-    cat > "$ROOT/traceability/FEAT-003/package-evidence-index.md" <<'EOF'
-# Package Evidence Index — FEAT-003
-EOF
-    TEMP_PACKAGE_INDEXES+=("$ROOT/traceability/FEAT-003/package-evidence-index.md")
-  fi
-  output=$("$SCRIPT" FEAT-003 2>&1) || { echo "FAIL: FEAT-003 should pass"; echo "$output"; exit 1; }
-  output=$("$SCRIPT" --enforce FEAT-003 2>&1) || { echo "FAIL: FEAT-003 enforce should pass"; echo "$output"; exit 1; }
+  copy_feat003_fixture TEST-FEAT003
+  ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003/gates/implementation-1.md" "artifacts/TEST-FEAT003/04-implementation/coding-log.md"
+  ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003/gates/release-1.md" "artifacts/TEST-FEAT003/07-release-retro/retro.md"
+  output=$("$SCRIPT" TEST-FEAT003 2>&1) || { echo "FAIL: TEST-FEAT003 should pass"; echo "$output"; exit 1; }
+  output=$("$SCRIPT" --enforce TEST-FEAT003 2>&1) || { echo "FAIL: TEST-FEAT003 enforce should pass"; echo "$output"; exit 1; }
 fi
+
+# Test 6b: incomplete gate artifact bindings fail verification
+copy_feat003_fixture TEST-BINDING
+ensure_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/implementation-1.md" "artifacts/TEST-BINDING/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/release-1.md" "artifacts/TEST-BINDING/07-release-retro/retro.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/code-review-1.md" "artifacts/TEST-BINDING/05-code-review/review-log.md"
+if "$SCRIPT" TEST-BINDING 2>/dev/null; then
+  echo "FAIL: TEST-BINDING should fail on incomplete gate bindings"; exit 1
+fi
+echo "PASS: gate artifact binding check works"
 
 # Test 7: failed gate result fails verification
 mkdir -p "$ROOT/.ai/packages/TEST-GATEFAIL/gates"
@@ -318,9 +446,11 @@ fi
 cp -R "$ROOT/.ai/packages/FEAT-001/gates" "$ROOT/.ai/packages/TEST-GATEFAIL/"
 if [[ "$(uname)" == "Darwin" ]]; then
   sed -i '' 's/FEAT-001/TEST-GATEFAIL/g' "$ROOT/.ai/packages/TEST-GATEFAIL/package.yaml"
+  find "$ROOT/.ai/packages/TEST-GATEFAIL/gates" -type f -exec sed -i '' 's/FEAT-001/TEST-GATEFAIL/g' {} +
   sed -i '' 's/result: pass/result: fail/' "$ROOT/.ai/packages/TEST-GATEFAIL/gates/requirements-1.md"
 else
   sed -i 's/FEAT-001/TEST-GATEFAIL/g' "$ROOT/.ai/packages/TEST-GATEFAIL/package.yaml"
+  find "$ROOT/.ai/packages/TEST-GATEFAIL/gates" -type f -exec sed -i 's/FEAT-001/TEST-GATEFAIL/g' {} +
   sed -i 's/result: pass/result: fail/' "$ROOT/.ai/packages/TEST-GATEFAIL/gates/requirements-1.md"
 fi
 cp -R "$ROOT/artifacts/FEAT-001" "$ROOT/artifacts/TEST-GATEFAIL"
@@ -369,7 +499,43 @@ children: []
 EOF
 echo "package_id: TEST-INCOMPLETE" > "$ROOT/.ai/packages/TEST-INCOMPLETE/classification.yaml"
 for phase in requirements design test-plan; do
-  echo "result: pass" > "$ROOT/.ai/packages/TEST-INCOMPLETE/gates/${phase}-1.md"
+  case "$phase" in
+    requirements)
+      phase_dir="01-requirements"
+      artifacts="PRD.md user-stories.md acceptance-criteria.md review-log.md"
+      next_phase="design"
+      ;;
+    design)
+      phase_dir="02-design"
+      artifacts="architecture.md review-log.md"
+      next_phase="test-plan"
+      ;;
+    test-plan)
+      phase_dir="03-test-plan"
+      artifacts="test-strategy.md test-cases.md review-log.md"
+      next_phase="ready_for_merge"
+      ;;
+  esac
+  {
+    echo "# Gate: $phase (attempt 1)"
+    echo
+    echo "result: pass"
+    echo "profile: standard"
+    echo "mode: loop"
+    echo
+    echo "artifacts_checked:"
+    for artifact in $artifacts; do
+      echo "  - artifacts/TEST-INCOMPLETE/$phase_dir/$artifact (v1)"
+    done
+    echo
+    echo "checklist:"
+    echo "  - [x] L1 self-review complete, no blocking failures"
+    echo "  - [x] Required artifacts exist for profile"
+    echo
+    echo "findings: []"
+    echo "reentry: 0"
+    echo "next: $next_phase"
+  } > "$ROOT/.ai/packages/TEST-INCOMPLETE/gates/${phase}-1.md"
 done
 cp -R "$ROOT/artifacts/FEAT-001" "$ROOT/artifacts/TEST-INCOMPLETE"
 if [[ "$(uname)" == "Darwin" ]]; then

@@ -31,6 +31,16 @@ if [[ -n "$EVIDENCE_POLICY" ]]; then
   EVIDENCE_POLICY_FILE=$(contract_resolve_path "$ROOT" "$EVIDENCE_POLICY")
 fi
 
+append_unique_file() {
+  local value="$1"
+  shift
+  local existing
+  for existing in "$@"; do
+    [[ "$existing" == "$value" ]] && return 1
+  done
+  return 0
+}
+
 phase_to_dir() {
   case "$1" in
     requirements) echo "01-requirements" ;;
@@ -92,6 +102,55 @@ check_gate_pass() {
   grep -qE '^result: pass' "$gate" || err "latest gate for $phase is not pass ($gate)"
 }
 
+gate_has_section() {
+  local gate="$1" section="$2"
+  grep -qE "^${section}:" "$gate"
+}
+
+gate_has_binding() {
+  local gate="$1" target="$2"
+  awk -v target="$target" '
+    /^artifacts_checked:/ { in_section=1; next }
+    in_section && /^[a-z_]+:/ { exit }
+    in_section && /^  - / {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/[[:space:]]+\([^)]*\)[[:space:]]*$/, "", line)
+      if (line == target) {
+        found=1
+        exit
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$gate"
+}
+
+check_gate_structure() {
+  local profile="$1" phase="$2" phase_dir="$3" gate="$4"
+  shift 4
+  local dir required_file artifact_path
+
+  dir=$(basename "$phase_dir")
+  grep -qE "^profile: ${profile}$" "$gate" || \
+    err "gate profile mismatch for $phase ($gate)"
+  grep -qE '^mode: [a-z_]+' "$gate" || \
+    err "gate mode missing for $phase ($gate)"
+  grep -qE '^reentry: [0-9]+' "$gate" || \
+    err "gate reentry missing for $phase ($gate)"
+  grep -qE '^next: ' "$gate" || \
+    err "gate next missing for $phase ($gate)"
+  gate_has_section "$gate" "artifacts_checked" || \
+    err "gate artifacts_checked missing for $phase ($gate)"
+  gate_has_section "$gate" "checklist" || \
+    err "gate checklist missing for $phase ($gate)"
+
+  for required_file in "$@"; do
+    artifact_path="artifacts/$PKG_ID/$dir/$required_file"
+    gate_has_binding "$gate" "$artifact_path" || \
+      err "gate artifacts_checked missing binding for $phase artifact $required_file ($gate)"
+  done
+}
+
 check_human_gate() {
   local profile="$1" phase="$2" phase_dir="$3"
   phase_in_human_gates "$profile" "$phase" || return 0
@@ -136,20 +195,33 @@ for phase in $ARCHIVED_PHASES; do
   dir=$(phase_to_dir "$phase")
   [[ -n "$dir" ]] || { err "unknown phase: $phase"; continue; }
   PHASE_DIR="$ART_DIR/$dir"
+  gate=""
+  required_files=()
   [[ -d "$PHASE_DIR" ]] || { err "missing artifacts/$PKG_ID/$dir"; continue; }
   required_count=0
   while IFS= read -r f; do
     [[ -n "$f" ]] || continue
+    if append_unique_file "$f" "${required_files[@]-}"; then
+      required_files+=("$f")
+    fi
+  done < <(contract_required_phase_files "$EVIDENCE_POLICY_FILE" "$PROFILE" "$phase")
+  for f in "${required_files[@]-}"; do
     required_count=$((required_count + 1))
     [[ -f "$PHASE_DIR/$f" ]] || err "missing $dir/$f"
-  done < <(contract_required_phase_files "$EVIDENCE_POLICY_FILE" "$PROFILE" "$phase")
+  done
   if [[ $required_count -eq 0 ]]; then
     err "no required artifacts configured for profile=$PROFILE phase=$phase"
     continue
   fi
 
   check_human_gate "$PROFILE" "$phase" "$PHASE_DIR"
-  check_gate_pass "$phase"
+  gate=$(latest_gate_file "$phase")
+  if [[ -z "$gate" ]]; then
+    err "no gate file for phase $phase"
+    continue
+  fi
+  grep -qE '^result: pass' "$gate" || err "latest gate for $phase is not pass ($gate)"
+  check_gate_structure "$PROFILE" "$phase" "$PHASE_DIR" "$gate" "${required_files[@]}"
 done
 
 if [[ "$PKG_STATUS" == "ready_for_release" ]]; then
