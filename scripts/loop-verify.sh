@@ -25,6 +25,81 @@ WARNINGS=0
 err() { echo "ERROR: $1"; ERRORS=$((ERRORS + 1)); }
 warn() { echo "WARN: $1"; WARNINGS=$((WARNINGS + 1)); }
 
+contract_policy_path() {
+  awk '
+    /^contract:/ { in_contract=1; next }
+    in_contract && /^[a-z_]+:/ { exit }
+    in_contract && /^[[:space:]]*evidence_policy:[[:space:]]*/ {
+      line=$0
+      sub(/^[^:]*:[[:space:]]*/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      if (line ~ /^"/) {
+        line=substr(line, 2)
+        end=index(line, "\"")
+        if (end > 0) {
+          print substr(line, 1, end - 1)
+          exit
+        }
+      }
+      if (line ~ /^'\''/) {
+        line=substr(line, 2)
+        end=index(line, "'\''")
+        if (end > 0) {
+          print substr(line, 1, end - 1)
+          exit
+        }
+      }
+      sub(/[[:space:]]+#.*/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      print line
+      exit
+    }
+  ' "$PROFILES"
+}
+
+resolve_policy_file() {
+  local policy_path="$1"
+  if [[ "$policy_path" = /* ]]; then
+    printf '%s\n' "$policy_path"
+  else
+    printf '%s\n' "$ROOT/$policy_path"
+  fi
+}
+
+required_files_for_phase() {
+  local profile="$1" phase="$2"
+  awk -v profile="$profile" -v phase="$phase" '
+    /^profiles:/ { in_profiles=1; next }
+    in_profiles && /^  [a-z_]+:/ {
+      current_profile=$1
+      sub(/:$/, "", current_profile)
+      in_profile=(current_profile == profile)
+      in_required=0
+      in_phase=0
+      next
+    }
+    !in_profile { next }
+    /^    required_artifacts:/ { in_required=1; next }
+    in_required && /^    [a-z_]+:/ { in_required=0; in_phase=0 }
+    !in_required { next }
+    /^      [a-z0-9-]+:/ {
+      current_phase=$1
+      sub(/:$/, "", current_phase)
+      in_phase=(current_phase == phase)
+      next
+    }
+    in_phase && /^        - / {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+      print line
+    }
+  ' "$EVIDENCE_POLICY_FILE"
+}
+
+EVIDENCE_POLICY=$(contract_policy_path)
+EVIDENCE_POLICY_FILE=$(resolve_policy_file "$EVIDENCE_POLICY")
+
 phase_to_dir() {
   case "$1" in
     requirements) echo "01-requirements" ;;
@@ -86,27 +161,6 @@ check_gate_pass() {
   grep -qE '^result: pass' "$gate" || err "latest gate for $phase is not pass ($gate)"
 }
 
-required_files_for_phase() {
-  local profile="$1" phase="$2"
-  case "$profile:$phase" in
-    standard:requirements|routine:requirements|high_risk:requirements)
-      echo "PRD.md user-stories.md acceptance-criteria.md review-log.md" ;;
-    standard:design|high_risk:design)
-      echo "architecture.md review-log.md" ;;
-    standard:test-plan|high_risk:test-plan)
-      echo "test-strategy.md test-cases.md review-log.md" ;;
-    standard:implementation|routine:implementation|high_risk:implementation)
-      echo "implementation-plan.md changed-files.md coding-log.md review-log.md" ;;
-    standard:code-review|routine:code-review|high_risk:code-review)
-      echo "ai-review.md review-log.md" ;;
-    standard:test-report|routine:test-report|high_risk:test-report)
-      echo "test-execution-summary.md coverage-report.md review-log.md" ;;
-    standard:release|routine:release|high_risk:release)
-      echo "release-notes.md known-issues.md retro.md review-log.md" ;;
-    *) echo "" ;;
-  esac
-}
-
 check_human_gate() {
   local profile="$1" phase="$2" phase_dir="$3"
   phase_in_human_gates "$profile" "$phase" || return 0
@@ -128,6 +182,9 @@ check_human_gate() {
 
 [[ -f "$PKG_DIR/package.yaml" ]] || { err "missing package.yaml"; echo "FAIL ($ERRORS errors)"; exit 1; }
 [[ -f "$PKG_DIR/classification.yaml" ]] || err "missing classification.yaml"
+[[ -n "$EVIDENCE_POLICY" ]] || err "profiles.yaml missing contract.evidence_policy"
+[[ -n "$EVIDENCE_POLICY" && -f "$EVIDENCE_POLICY_FILE" ]] || \
+  err "missing configured evidence policy ($EVIDENCE_POLICY)"
 
 PROFILE=$(grep -E '^profile:' "$PKG_DIR/package.yaml" | awk '{print $2}')
 [[ -n "$PROFILE" ]] || err "package.yaml missing profile"
@@ -144,15 +201,15 @@ for phase in $ARCHIVED_PHASES; do
   [[ -n "$dir" ]] || { err "unknown phase: $phase"; continue; }
   PHASE_DIR="$ART_DIR/$dir"
   [[ -d "$PHASE_DIR" ]] || { err "missing artifacts/$PKG_ID/$dir"; continue; }
-  [[ -f "$PHASE_DIR/review-log.md" ]] || err "missing review-log in $dir"
-
-  required=$(required_files_for_phase "$PROFILE" "$phase")
-  for f in $required; do
+  required_count=0
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
+    required_count=$((required_count + 1))
     [[ -f "$PHASE_DIR/$f" ]] || err "missing $dir/$f"
-  done
-
-  if [[ "$PROFILE" == "high_risk" && "$phase" == "code-review" ]]; then
-    [[ -f "$PHASE_DIR/security-review.md" ]] || err "missing code-review/security-review.md (high_risk)"
+  done < <(required_files_for_phase "$PROFILE" "$phase")
+  if [[ $required_count -eq 0 ]]; then
+    err "no required artifacts configured for profile=$PROFILE phase=$phase"
+    continue
   fi
 
   check_human_gate "$PROFILE" "$phase" "$PHASE_DIR"

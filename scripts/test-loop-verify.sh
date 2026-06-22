@@ -3,6 +3,49 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$ROOT/scripts/loop-verify.sh"
+EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
+EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-GATEFAIL TEST-INCOMPLETE)
+
+restore_policy() {
+  if [[ -f "$EVIDENCE_POLICY_BAK" ]]; then
+    mv "$EVIDENCE_POLICY_BAK" "$EVIDENCE_POLICY"
+  fi
+}
+
+cleanup_fixtures() {
+  local pkg
+  restore_policy
+  for pkg in "${TEST_PACKAGES[@]}"; do
+    rm -rf "$ROOT/.ai/packages/$pkg" "$ROOT/artifacts/$pkg" "$ROOT/traceability/$pkg"
+  done
+}
+
+cleanup_fixtures
+trap cleanup_fixtures EXIT
+
+# Test 0: verifier fails when the configured evidence policy is missing
+[[ -f "$EVIDENCE_POLICY" ]] || {
+  echo "FAIL: missing .ai/contracts/evidence-policy.yaml"
+  exit 1
+}
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_BAK"
+if output=$("$SCRIPT" FEAT-001 2>&1); then
+  echo "FAIL: FEAT-001 verifier should fail when .ai/contracts/evidence-policy.yaml is missing"
+  exit 1
+fi
+echo "$output" | grep -q "missing configured evidence policy" || {
+  echo "FAIL: expected missing evidence policy error"
+  echo "$output"
+  exit 1
+}
+restore_policy
+output=$("$SCRIPT" FEAT-001 2>&1) || {
+  echo "FAIL: FEAT-001 should pass once evidence policy is restored"
+  echo "$output"
+  exit 1
+}
+echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring evidence policy"; exit 1; }
 
 # Test 1: FEAT-001 demo package passes
 output=$("$SCRIPT" FEAT-001 2>&1) || { echo "FAIL: FEAT-001 should pass"; echo "$output"; exit 1; }
@@ -31,7 +74,6 @@ fi
 if "$SCRIPT" TEST-BAD 2>/dev/null; then
   echo "FAIL: TEST-BAD should fail without artifacts"; exit 1
 fi
-rm -rf "$ROOT/.ai/packages/TEST-BAD"
 echo "PASS: TEST-BAD correctly failed"
 
 # Test 4: FEAT-001 still passes (regression)
@@ -62,7 +104,6 @@ echo "$output" | grep -q "WARN" || { echo "FAIL: TEST-NOMATRIX should warn witho
 if "$SCRIPT" --enforce TEST-NOMATRIX 2>/dev/null; then
   echo "FAIL: --enforce should fail without matrix"; exit 1
 fi
-rm -rf "$ROOT/.ai/packages/TEST-NOMATRIX" "$ROOT/artifacts/TEST-NOMATRIX"
 echo "PASS: enforce flag works"
 
 # Test 6: FEAT-003 passes when present
@@ -109,7 +150,6 @@ fi
 if "$SCRIPT" TEST-GATEFAIL 2>/dev/null; then
   echo "FAIL: TEST-GATEFAIL should fail on gate result fail"; exit 1
 fi
-rm -rf "$ROOT/.ai/packages/TEST-GATEFAIL" "$ROOT/artifacts/TEST-GATEFAIL" "$ROOT/traceability/TEST-GATEFAIL"
 echo "PASS: gate result check works"
 
 # Test 8: ready_for_release requires all profile phases archived
@@ -152,7 +192,6 @@ fi
 if "$SCRIPT" TEST-INCOMPLETE 2>/dev/null; then
   echo "FAIL: TEST-INCOMPLETE should fail (ready_for_release with 3/7 phases)"; exit 1
 fi
-rm -rf "$ROOT/.ai/packages/TEST-INCOMPLETE" "$ROOT/artifacts/TEST-INCOMPLETE" "$ROOT/traceability/TEST-INCOMPLETE"
 echo "PASS: profile completeness check works"
 
 echo "All loop-verify tests passed"

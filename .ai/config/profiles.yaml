@@ -1,4 +1,8 @@
 # .ai/config/profiles.yaml
+contract:
+  evidence_policy: .ai/contracts/evidence-policy.yaml
+  version: 2026-06-22.1
+
 standard:
   phases: [requirements, design, test-plan, implementation, code-review, test-report, release]
   human_gates: [requirements]

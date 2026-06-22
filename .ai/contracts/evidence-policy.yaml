@@ -1,0 +1,124 @@
+version: 2026-06-22.1
+profiles:
+  standard:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  routine:
+    phases:
+      - requirements
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates: []
+    max_reentry: 2
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  high_risk:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+      - design
+      - test-plan
+      - code-review
+      - test-report
+      - release
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - security-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
