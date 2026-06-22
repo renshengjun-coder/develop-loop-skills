@@ -2,6 +2,7 @@
 # scripts/loop-verify.sh — L3 structural verifier (no LLM)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib/loop-contract.sh"
 ENFORCE=0
 PKG_ID=""
 
@@ -24,81 +25,11 @@ WARNINGS=0
 
 err() { echo "ERROR: $1"; ERRORS=$((ERRORS + 1)); }
 warn() { echo "WARN: $1"; WARNINGS=$((WARNINGS + 1)); }
-
-contract_policy_path() {
-  awk '
-    /^contract:/ { in_contract=1; next }
-    in_contract && /^[a-z_]+:/ { exit }
-    in_contract && /^[[:space:]]*evidence_policy:[[:space:]]*/ {
-      line=$0
-      sub(/^[^:]*:[[:space:]]*/, "", line)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-      if (line ~ /^"/) {
-        line=substr(line, 2)
-        end=index(line, "\"")
-        if (end > 0) {
-          print substr(line, 1, end - 1)
-          exit
-        }
-      }
-      if (line ~ /^'\''/) {
-        line=substr(line, 2)
-        end=index(line, "'\''")
-        if (end > 0) {
-          print substr(line, 1, end - 1)
-          exit
-        }
-      }
-      sub(/[[:space:]]+#.*/, "", line)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-      print line
-      exit
-    }
-  ' "$PROFILES"
-}
-
-resolve_policy_file() {
-  local policy_path="$1"
-  if [[ "$policy_path" = /* ]]; then
-    printf '%s\n' "$policy_path"
-  else
-    printf '%s\n' "$ROOT/$policy_path"
-  fi
-}
-
-required_files_for_phase() {
-  local profile="$1" phase="$2"
-  awk -v profile="$profile" -v phase="$phase" '
-    /^profiles:/ { in_profiles=1; next }
-    in_profiles && /^  [a-z_]+:/ {
-      current_profile=$1
-      sub(/:$/, "", current_profile)
-      in_profile=(current_profile == profile)
-      in_required=0
-      in_phase=0
-      next
-    }
-    !in_profile { next }
-    /^    required_artifacts:/ { in_required=1; next }
-    in_required && /^    [a-z_]+:/ { in_required=0; in_phase=0 }
-    !in_required { next }
-    /^      [a-z0-9-]+:/ {
-      current_phase=$1
-      sub(/:$/, "", current_phase)
-      in_phase=(current_phase == phase)
-      next
-    }
-    in_phase && /^        - / {
-      line=$0
-      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
-      print line
-    }
-  ' "$EVIDENCE_POLICY_FILE"
-}
-
-EVIDENCE_POLICY=$(contract_policy_path)
-EVIDENCE_POLICY_FILE=$(resolve_policy_file "$EVIDENCE_POLICY")
+EVIDENCE_POLICY=$(contract_policy_path_from_profiles "$PROFILES")
+EVIDENCE_POLICY_FILE=""
+if [[ -n "$EVIDENCE_POLICY" ]]; then
+  EVIDENCE_POLICY_FILE=$(contract_resolve_path "$ROOT" "$EVIDENCE_POLICY")
+fi
 
 phase_to_dir() {
   case "$1" in
@@ -189,6 +120,11 @@ check_human_gate() {
 PROFILE=$(grep -E '^profile:' "$PKG_DIR/package.yaml" | awk '{print $2}')
 [[ -n "$PROFILE" ]] || err "package.yaml missing profile"
 
+if [[ $ERRORS -gt 0 ]]; then
+  echo "FAIL ($ERRORS errors, $WARNINGS warnings)"
+  exit 1
+fi
+
 PKG_STATUS=$(grep -E '^status:' "$PKG_DIR/package.yaml" | awk '{print $2}')
 
 ARCHIVED_PHASES=$(awk '
@@ -206,7 +142,7 @@ for phase in $ARCHIVED_PHASES; do
     [[ -n "$f" ]] || continue
     required_count=$((required_count + 1))
     [[ -f "$PHASE_DIR/$f" ]] || err "missing $dir/$f"
-  done < <(required_files_for_phase "$PROFILE" "$phase")
+  done < <(contract_required_phase_files "$EVIDENCE_POLICY_FILE" "$PROFILE" "$phase")
   if [[ $required_count -eq 0 ]]; then
     err "no required artifacts configured for profile=$PROFILE phase=$phase"
     continue
@@ -224,11 +160,25 @@ if [[ "$PKG_STATUS" == "ready_for_release" ]]; then
   done < <(profile_phases "$PROFILE")
 fi
 
-if [[ ! -f "$TRACE_MATRIX" ]]; then
-  if [[ "$ENFORCE" -eq 1 ]]; then
-    err "missing traceability/$PKG_ID/matrix.md (enforce mode)"
-  else
-    warn "missing traceability/$PKG_ID/matrix.md"
+package_files_output=""
+if ! package_files_output=$(contract_required_package_files "$EVIDENCE_POLICY_FILE"); then
+  err "$(contract_required_package_files_error "$EVIDENCE_POLICY_FILE")"
+else
+  required_package_count=0
+  while IFS= read -r package_file; do
+    [[ -n "$package_file" ]] || continue
+    required_package_count=$((required_package_count + 1))
+    if [[ ! -f "$ROOT/traceability/$PKG_ID/$package_file" ]]; then
+      if [[ "$ENFORCE" -eq 1 ]]; then
+        err "missing traceability/$PKG_ID/$package_file (enforce mode)"
+      else
+        warn "missing traceability/$PKG_ID/$package_file"
+      fi
+    fi
+  done <<< "$package_files_output"
+
+  if [[ $required_package_count -eq 0 ]]; then
+    err "no required package evidence files configured"
   fi
 fi
 

@@ -5,17 +5,25 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$ROOT/scripts/loop-verify.sh"
 EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
 EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
-TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-GATEFAIL TEST-INCOMPLETE)
+EVIDENCE_POLICY_MALFORMED_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.malformedbak"
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-GATEFAIL TEST-INCOMPLETE)
+TEMP_PACKAGE_INDEXES=()
 
 restore_policy() {
   if [[ -f "$EVIDENCE_POLICY_BAK" ]]; then
     mv "$EVIDENCE_POLICY_BAK" "$EVIDENCE_POLICY"
+  fi
+  if [[ -f "$EVIDENCE_POLICY_MALFORMED_BAK" ]]; then
+    mv "$EVIDENCE_POLICY_MALFORMED_BAK" "$EVIDENCE_POLICY"
   fi
 }
 
 cleanup_fixtures() {
   local pkg
   restore_policy
+  for pkg in "${TEMP_PACKAGE_INDEXES[@]-}"; do
+    rm -f "$pkg"
+  done
   for pkg in "${TEST_PACKAGES[@]}"; do
     rm -rf "$ROOT/.ai/packages/$pkg" "$ROOT/artifacts/$pkg" "$ROOT/traceability/$pkg"
   done
@@ -46,6 +54,153 @@ output=$("$SCRIPT" FEAT-001 2>&1) || {
   exit 1
 }
 echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring evidence policy"; exit 1; }
+
+# Test 0b: malformed required_package_files must fail instead of using compatibility fallback
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+cat > "$EVIDENCE_POLICY" <<'EOF'
+version: 2026-06-22.1
+profiles:
+  standard:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  routine:
+    phases:
+      - requirements
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates: []
+    max_reentry: 2
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  high_risk:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+      - design
+      - test-plan
+      - code-review
+      - test-report
+      - release
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - security-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+human_readable_evidence:
+  required_package_files:
+EOF
+if output=$("$SCRIPT" FEAT-001 2>&1); then
+  echo "FAIL: FEAT-001 should fail when required_package_files is malformed"
+  exit 1
+fi
+echo "$output" | grep -q "invalid human_readable_evidence.required_package_files" || {
+  echo "FAIL: expected malformed required_package_files error"
+  echo "$output"
+  exit 1
+}
+restore_policy
+output=$("$SCRIPT" FEAT-001 2>&1) || {
+  echo "FAIL: FEAT-001 should pass once malformed policy is restored"
+  echo "$output"
+  exit 1
+}
+echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring malformed policy"; exit 1; }
 
 # Test 1: FEAT-001 demo package passes
 output=$("$SCRIPT" FEAT-001 2>&1) || { echo "FAIL: FEAT-001 should pass"; echo "$output"; exit 1; }
@@ -106,8 +261,48 @@ if "$SCRIPT" --enforce TEST-NOMATRIX 2>/dev/null; then
 fi
 echo "PASS: enforce flag works"
 
+# Test 5b: --enforce requires package evidence index when matrix is present
+mkdir -p "$ROOT/.ai/packages/TEST-NOINDEX/gates"
+cat > "$ROOT/.ai/packages/TEST-NOINDEX/package.yaml" <<'EOF'
+id: TEST-NOINDEX
+owner: test
+profile: routine
+mode: loop
+status: in_progress
+phases:
+  requirements:
+    status: archived
+    artifact_version: v1
+children: []
+EOF
+echo "package_id: TEST-NOINDEX" > "$ROOT/.ai/packages/TEST-NOINDEX/classification.yaml"
+mkdir -p "$ROOT/artifacts/TEST-NOINDEX/01-requirements"
+for f in PRD.md user-stories.md acceptance-criteria.md review-log.md; do
+  echo "status: approved" > "$ROOT/artifacts/TEST-NOINDEX/01-requirements/$f"
+done
+echo "result: pass" > "$ROOT/.ai/packages/TEST-NOINDEX/gates/requirements-1.md"
+mkdir -p "$ROOT/traceability/TEST-NOINDEX"
+cat > "$ROOT/traceability/TEST-NOINDEX/matrix.md" <<'EOF'
+# Traceability Matrix — TEST-NOINDEX
+EOF
+if output=$("$SCRIPT" --enforce TEST-NOINDEX 2>&1); then
+  echo "FAIL: --enforce should fail without package-evidence-index"; exit 1
+fi
+echo "$output" | grep -q "missing traceability/TEST-NOINDEX/package-evidence-index.md (enforce mode)" || {
+  echo "FAIL: expected missing package-evidence-index error"
+  echo "$output"
+  exit 1
+}
+echo "PASS: package evidence index enforce check works"
+
 # Test 6: FEAT-003 passes when present
 if [[ -d "$ROOT/.ai/packages/FEAT-003" ]]; then
+  if [[ ! -f "$ROOT/traceability/FEAT-003/package-evidence-index.md" ]]; then
+    cat > "$ROOT/traceability/FEAT-003/package-evidence-index.md" <<'EOF'
+# Package Evidence Index — FEAT-003
+EOF
+    TEMP_PACKAGE_INDEXES+=("$ROOT/traceability/FEAT-003/package-evidence-index.md")
+  fi
   output=$("$SCRIPT" FEAT-003 2>&1) || { echo "FAIL: FEAT-003 should pass"; echo "$output"; exit 1; }
   output=$("$SCRIPT" --enforce FEAT-003 2>&1) || { echo "FAIL: FEAT-003 enforce should pass"; echo "$output"; exit 1; }
 fi
