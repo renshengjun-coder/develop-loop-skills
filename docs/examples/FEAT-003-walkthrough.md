@@ -48,12 +48,16 @@ requirements (PRD, AC) → design (architecture) → test-plan (TC-001..004)
 
 Trace matrix: `traceability/FEAT-003/matrix.md` — code column filled for AC-001..003.
 
+Audit entry points: start with `traceability/FEAT-003/package-evidence-index.md` for package readiness, then use `traceability/FEAT-003/matrix.md` for AC-level linkage and the linked gates/artifacts for detail.
+
 ## Verify
 
 ```bash
-./scripts/devloop-verify.sh FEAT-003
-./scripts/devloop-verify.sh --enforce FEAT-003
+./scripts/loop-verify.sh FEAT-003
+./scripts/loop-verify.sh --enforce FEAT-003
 ```
+
+Baseline L3 already enforces required gate-to-artifact bindings. `--enforce` strengthens the same verifier by promoting missing required human-readable package evidence files from warnings to errors, using `.ai/contracts/evidence-policy.yaml`.
 
 ## Phase 2 acceptance checklist
 
@@ -63,6 +67,7 @@ Trace matrix: `traceability/FEAT-003/matrix.md` — code column filled for AC-00
 | routine profile skips design/test-plan | Classify example above |
 | high_risk human gates | `profiles.yaml` human_gates |
 | Parent-child gate | FEAT-PARENT `gates/release-1.md` |
-| CI enforce | `.github/workflows/devloop-verify.yml` |
+| CI enforce | `.github/workflows/loop-verify.yml` |
+| Package audit index | `traceability/FEAT-003/package-evidence-index.md` |
 | Code in trace matrix | `traceability/FEAT-003/matrix.md` |
 | FEAT-001 MVP unchanged | `loop-verify.sh FEAT-001` PASS |

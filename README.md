@@ -223,7 +223,11 @@ To work on skills here, edit `.ai/skills/` and use the pointer layout under `.cu
 |-------|-------|----------|
 | L1 | Phase skills | `review-log.md` self-check |
 | L2 | Lifecycle loop | `gates/<phase>-<n>.md` |
-| L3 | `loop-verify.sh` | Structural file checks (CI) |
+| L3 | `loop-verify.sh` + `.ai/contracts/evidence-policy.yaml` | Contract-driven structural checks for package, traceability, and gate evidence (CI) |
+
+Primary human audit entry point per package: `traceability/<id>/package-evidence-index.md`. The trace matrix remains the detailed AC-to-evidence map, while the package evidence index summarizes readiness, latest gates, approvals, waivers, and linked evidence in one place.
+
+Compatibility note: current verifier behavior keeps a fallback for human-readable evidence policy rollout. If `human_readable_evidence` is absent from `.ai/contracts/evidence-policy.yaml`, L3 falls back to requiring `matrix.md` plus `package-evidence-index.md`; if that section is present but malformed, verification fails instead of silently falling back.
 
 ## Directory layout (consumer project after `devloop init`)
 
@@ -247,5 +251,7 @@ Full SDLC design: `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.
 ./scripts/loop-verify.sh --enforce FEAT-003
 ./scripts/test-loop-verify.sh
 ```
+
+For human review, start at `traceability/<id>/package-evidence-index.md` and follow its links into `matrix.md`, gates, and phase artifacts as needed.
 
 CI runs `loop-verify` in **enforce mode** on pull requests when branch protection is configured (`docs/ci/branch-protection.md`).

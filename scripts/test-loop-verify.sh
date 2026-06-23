@@ -680,4 +680,19 @@ if "$SCRIPT" TEST-INCOMPLETE 2>/dev/null; then
 fi
 echo "PASS: profile completeness check works"
 
+# Full-regression check: committed demo evidence indexes must remain present
+[[ -f "$ROOT/traceability/FEAT-001/package-evidence-index.md" ]] || {
+  echo "FAIL: missing committed package evidence index for FEAT-001"; exit 1
+}
+[[ -f "$ROOT/traceability/FEAT-003/package-evidence-index.md" ]] || {
+  echo "FAIL: missing committed package evidence index for FEAT-003"; exit 1
+}
+[[ -f "$ROOT/traceability/FEAT-PARENT/package-evidence-index.md" ]] || {
+  echo "FAIL: missing committed package evidence index for FEAT-PARENT"; exit 1
+}
+[[ -f "$ROOT/traceability/FEAT-CHILD/package-evidence-index.md" ]] || {
+  echo "FAIL: missing committed package evidence index for FEAT-CHILD"; exit 1
+}
+echo "PASS: committed package evidence indexes exist for FEAT-001, FEAT-003, FEAT-PARENT, and FEAT-CHILD"
+
 echo "All loop-verify tests passed"
