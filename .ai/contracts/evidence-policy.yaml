@@ -1,4 +1,4 @@
-version: 2026-06-22.1
+version: 2026-06-23.1
 profiles:
   standard:
     phases:
@@ -122,3 +122,28 @@ profiles:
         - known-issues.md
         - retro.md
         - review-log.md
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true

@@ -23,6 +23,7 @@ PROFILES="$ROOT/.ai/config/profiles.yaml"
 ERRORS=0
 WARNINGS=0
 REQUIRED_PACKAGE_FILES=()
+REQUIRE_PACKAGE_GATE_BINDINGS=0
 
 err() { echo "ERROR: $1"; ERRORS=$((ERRORS + 1)); }
 warn() { echo "WARN: $1"; WARNINGS=$((WARNINGS + 1)); }
@@ -114,6 +115,14 @@ package_child_ids() {
   ' "$PKG_DIR/package.yaml"
 }
 
+package_manifest_status() {
+  local package_id="$1"
+  local package_file="$ROOT/.ai/packages/$package_id/package.yaml"
+
+  [[ -f "$package_file" ]] || return 1
+  awk '/^status:/ { print $2; exit }' "$package_file"
+}
+
 gate_has_binding_prefix() {
   local gate="$1" prefix="$2"
   awk -v prefix="$prefix" '
@@ -169,40 +178,245 @@ child_evidence_value() {
   ' "$gate"
 }
 
+phase_rank() {
+  case "$1" in
+    requirements) echo 1 ;;
+    design) echo 2 ;;
+    test-plan) echo 3 ;;
+    implementation) echo 4 ;;
+    code-review) echo 5 ;;
+    test-report) echo 6 ;;
+    release) echo 7 ;;
+    *) echo 0 ;;
+  esac
+}
+
+latest_gate_file_for_package_phase() {
+  local package_id="$1" phase="$2"
+  local package_gate_dir="$ROOT/.ai/packages/$package_id/gates"
+  local gates=() gate_file
+
+  [[ -d "$package_gate_dir" ]] || return 1
+
+  shopt -s nullglob
+  for gate_file in "$package_gate_dir/${phase}-"*.md; do
+    gates+=("$gate_file")
+  done
+  shopt -u nullglob
+
+  ((${#gates[@]})) || return 1
+  printf '%s\n' "${gates[@]}" | sort -V | tail -1
+}
+
+current_archived_phase_for_package() {
+  local package_id="$1"
+  local package_file="$ROOT/.ai/packages/$package_id/package.yaml"
+  local phase
+  local best_rank=-1
+  local best_phase=""
+
+  [[ -f "$package_file" ]] || return 1
+
+  while IFS= read -r phase; do
+    local rank
+    [[ -n "$phase" ]] || continue
+    rank=$(phase_rank "$phase")
+    [[ "$rank" -gt 0 ]] || continue
+    if [[ "$rank" -gt "$best_rank" ]]; then
+      best_rank="$rank"
+      best_phase="$phase"
+    fi
+  done < <(awk '
+    /^  [a-z-]+:$/ {
+      phase=$1
+      gsub(/:/, "", phase)
+      next
+    }
+    /^[^[:space:]]/ {
+      phase=""
+    }
+    /status: archived/ {
+      if (phase != "") {
+        print phase
+      }
+    }
+  ' "$package_file")
+
+  [[ -n "$best_phase" ]] || return 1
+  printf '%s\n' "$best_phase"
+}
+
+current_latest_gate_ref_for_package() {
+  local package_id="$1"
+  local current_phase gate_file
+
+  current_phase=$(current_archived_phase_for_package "$package_id") || return 1
+  gate_file=$(latest_gate_file_for_package_phase "$package_id" "$current_phase") || return 1
+  printf '.ai/packages/%s/gates/%s\n' "$package_id" "$(basename "$gate_file")"
+}
+
 check_parent_child_release_evidence() {
   local gate="$1"
   local child_id has_children=0
-  local latest_gate_ref latest_gate_path
+  local latest_gate_ref latest_gate_path actual_latest_gate_ref child_manifest_status child_status_ref
+  local required_binding required_field
+  local required_bindings_output required_fields_output
+  local required_bindings=()
+  local required_fields=()
+  local parent_child_status child_evidence_section_status latest_gate_binding_status latest_gate_pass_status
+
+  if contract_parent_child_release_required "$EVIDENCE_POLICY_FILE"; then
+    parent_child_status=0
+  else
+    parent_child_status=$?
+  fi
+  if [[ $parent_child_status -ne 0 ]]; then
+    case "$parent_child_status" in
+      1) return 0 ;;
+      2)
+        err "$(contract_parent_child_release_error)"
+        return 0
+        ;;
+    esac
+  fi
+
+  if required_bindings_output=$(contract_parent_child_required_bindings "$EVIDENCE_POLICY_FILE"); then
+    :
+  else
+    err "$(contract_parent_child_required_bindings_error)"
+    return 0
+  fi
+  while IFS= read -r required_binding; do
+    [[ -n "$required_binding" ]] || continue
+    required_bindings+=("$required_binding")
+  done <<< "$required_bindings_output"
+
+  if required_fields_output=$(contract_parent_child_required_fields "$EVIDENCE_POLICY_FILE"); then
+    :
+  else
+    err "$(contract_parent_child_required_fields_error)"
+    return 0
+  fi
+  while IFS= read -r required_field; do
+    [[ -n "$required_field" ]] || continue
+    required_fields+=("$required_field")
+  done <<< "$required_fields_output"
 
   while IFS= read -r child_id; do
     [[ -n "$child_id" ]] || continue
     has_children=1
-    gate_has_section "$gate" "child_evidence" || \
-      err "gate child_evidence missing for release ($gate)"
-    gate_has_binding "$gate" ".ai/packages/$child_id/package.yaml" || \
-      err "release gate missing child package reference for $child_id ($gate)"
-    gate_has_binding "$gate" "traceability/$child_id/package-evidence-index.md" || \
-      err "release gate missing child evidence index reference for $child_id ($gate)"
-    gate_has_binding_prefix "$gate" ".ai/packages/$child_id/gates/" || \
-      err "release gate missing child readiness gate reference for $child_id ($gate)"
-    child_evidence_block_has "$gate" "$child_id" "^    status: " || \
-      err "release gate child_evidence missing status for $child_id ($gate)"
-    child_evidence_block_has "$gate" "$child_id" "^    package: \\.ai/packages/$child_id/package\\.yaml$" || \
-      err "release gate child_evidence missing package reference for $child_id ($gate)"
-    child_evidence_block_has "$gate" "$child_id" "^    latest_gate: \\.ai/packages/$child_id/gates/.+\\.md$" || \
-      err "release gate child_evidence missing latest_gate reference for $child_id ($gate)"
-    child_evidence_block_has "$gate" "$child_id" "^    evidence_index: traceability/$child_id/package-evidence-index\\.md$" || \
-      err "release gate child_evidence missing evidence index reference for $child_id ($gate)"
+    child_manifest_status=$(package_manifest_status "$child_id")
     latest_gate_ref=$(child_evidence_value "$gate" "$child_id" "latest_gate")
+    child_status_ref=$(child_evidence_value "$gate" "$child_id" "status")
+
+    if contract_parent_child_child_evidence_section_required "$EVIDENCE_POLICY_FILE"; then
+      child_evidence_section_status=0
+    else
+      child_evidence_section_status=$?
+    fi
+    if [[ $child_evidence_section_status -ne 0 ]]; then
+      case "$child_evidence_section_status" in
+        1) ;;
+        2)
+          err "$(contract_parent_child_child_evidence_section_error)"
+          continue
+          ;;
+      esac
+    else
+      gate_has_section "$gate" "child_evidence" || \
+        err "gate child_evidence missing for release ($gate)"
+    fi
+
+    for required_field in "${required_fields[@]-}"; do
+      case "$required_field" in
+        status)
+          child_evidence_block_has "$gate" "$child_id" "^    status: " || \
+            err "release gate child_evidence missing status for $child_id ($gate)"
+          if [[ -n "$child_status_ref" ]]; then
+            [[ -n "$child_manifest_status" ]] || \
+              err "release gate child_evidence status could not be verified for $child_id (missing child package status)"
+            if [[ -n "$child_manifest_status" ]]; then
+              [[ "$child_status_ref" == "$child_manifest_status" ]] || \
+                err "release gate child_evidence status mismatch for $child_id (expected $child_manifest_status, found $child_status_ref)"
+            fi
+          fi
+          ;;
+        package)
+          child_evidence_block_has "$gate" "$child_id" "^    package: \\.ai/packages/$child_id/package\\.yaml$" || \
+            err "release gate child_evidence missing package reference for $child_id ($gate)"
+          ;;
+        latest_gate)
+          child_evidence_block_has "$gate" "$child_id" "^    latest_gate: \\.ai/packages/$child_id/gates/.+\\.md$" || \
+            err "release gate child_evidence missing latest_gate reference for $child_id ($gate)"
+          ;;
+        evidence_index)
+          child_evidence_block_has "$gate" "$child_id" "^    evidence_index: traceability/$child_id/package-evidence-index\\.md$" || \
+            err "release gate child_evidence missing evidence index reference for $child_id ($gate)"
+          ;;
+      esac
+    done
+
+    for required_binding in "${required_bindings[@]-}"; do
+      case "$required_binding" in
+        child_package)
+          gate_has_binding "$gate" ".ai/packages/$child_id/package.yaml" || \
+            err "release gate missing child package reference for $child_id ($gate)"
+          ;;
+        child_evidence_index)
+          gate_has_binding "$gate" "traceability/$child_id/package-evidence-index.md" || \
+            err "release gate missing child evidence index reference for $child_id ($gate)"
+          ;;
+        child_latest_gate)
+          [[ -n "$latest_gate_ref" ]] || \
+            err "release gate child_evidence missing latest_gate reference for $child_id ($gate)"
+          if [[ -n "$latest_gate_ref" ]]; then
+            gate_has_binding "$gate" "$latest_gate_ref" || \
+              err "release gate latest_gate is not listed in artifacts_checked for $child_id ($gate)"
+          fi
+          ;;
+      esac
+    done
+
     if [[ -n "$latest_gate_ref" ]]; then
-      gate_has_binding "$gate" "$latest_gate_ref" || \
-        err "release gate latest_gate is not listed in artifacts_checked for $child_id ($gate)"
-      latest_gate_path="$ROOT/$latest_gate_ref"
-      [[ -f "$latest_gate_path" ]] || \
-        err "release gate latest_gate file missing for $child_id ($latest_gate_ref)"
-      if [[ -f "$latest_gate_path" ]]; then
-        grep -qE '^result: pass' "$latest_gate_path" || \
-          err "release gate latest_gate is not pass for $child_id ($latest_gate_ref)"
+      if contract_parent_child_latest_gate_binding_required "$EVIDENCE_POLICY_FILE"; then
+        latest_gate_binding_status=0
+      else
+        latest_gate_binding_status=$?
+      fi
+      if [[ $latest_gate_binding_status -ne 0 ]]; then
+        case "$latest_gate_binding_status" in
+          1) ;;
+          2) err "$(contract_parent_child_latest_gate_binding_error)" ;;
+        esac
+      else
+        gate_has_binding "$gate" "$latest_gate_ref" || \
+          err "release gate latest_gate is not listed in artifacts_checked for $child_id ($gate)"
+      fi
+
+      if contract_parent_child_latest_gate_pass_required "$EVIDENCE_POLICY_FILE"; then
+        latest_gate_pass_status=0
+      else
+        latest_gate_pass_status=$?
+      fi
+      if [[ $latest_gate_pass_status -ne 0 ]]; then
+        case "$latest_gate_pass_status" in
+          1) ;;
+          2) err "$(contract_parent_child_latest_gate_pass_error)" ;;
+        esac
+      else
+        latest_gate_path="$ROOT/$latest_gate_ref"
+        [[ -f "$latest_gate_path" ]] || \
+          err "release gate latest_gate file missing for $child_id ($latest_gate_ref)"
+        if [[ -f "$latest_gate_path" ]]; then
+          grep -qE '^result: pass' "$latest_gate_path" || \
+            err "release gate latest_gate is not pass for $child_id ($latest_gate_ref)"
+          if actual_latest_gate_ref=$(current_latest_gate_ref_for_package "$child_id"); then
+            [[ "$latest_gate_ref" == "$actual_latest_gate_ref" ]] || \
+              err "release gate latest_gate is stale for $child_id (expected $actual_latest_gate_ref, found $latest_gate_ref)"
+          else
+            err "release gate latest_gate could not be proven for $child_id (no current archived child gate found)"
+          fi
+        fi
       fi
     fi
   done < <(package_child_ids)
@@ -280,11 +494,13 @@ check_gate_structure() {
       err "gate artifacts_checked missing binding for $phase artifact $required_file ($gate)"
   done
 
-  for package_file in "${REQUIRED_PACKAGE_FILES[@]-}"; do
-    artifact_path="traceability/$PKG_ID/$package_file"
-    gate_has_binding "$gate" "$artifact_path" || \
-      err "gate artifacts_checked missing package evidence binding for $phase artifact $package_file ($gate)"
-  done
+  if [[ "$REQUIRE_PACKAGE_GATE_BINDINGS" -eq 1 ]]; then
+    for package_file in "${REQUIRED_PACKAGE_FILES[@]-}"; do
+      artifact_path="traceability/$PKG_ID/$package_file"
+      gate_has_binding "$gate" "$artifact_path" || \
+        err "gate artifacts_checked missing package evidence binding for $phase artifact $package_file ($gate)"
+    done
+  fi
 }
 
 check_human_gate() {
@@ -319,6 +535,23 @@ if [[ $ERRORS -gt 0 ]]; then
   echo "FAIL ($ERRORS errors, $WARNINGS warnings)"
   exit 1
 fi
+
+if contract_human_readable_gate_bindings_required "$EVIDENCE_POLICY_FILE"; then
+  gate_bindings_status=0
+else
+  gate_bindings_status=$?
+fi
+
+case "$gate_bindings_status" in
+  0)
+    REQUIRE_PACKAGE_GATE_BINDINGS=1
+    ;;
+  1)
+    ;;
+  2)
+    err "$(contract_human_readable_gate_bindings_error)"
+    ;;
+esac
 
 PKG_STATUS=$(grep -E '^status:' "$PKG_DIR/package.yaml" | awk '{print $2}')
 

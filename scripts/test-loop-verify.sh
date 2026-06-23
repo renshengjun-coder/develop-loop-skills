@@ -6,7 +6,7 @@ SCRIPT="$ROOT/scripts/loop-verify.sh"
 EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
 EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
 EVIDENCE_POLICY_MALFORMED_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.malformedbak"
-TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-FEAT003-ATV TEST-FEAT003-PKGBIND TEST-FEATPARENT TEST-FEATPARENT-CHILD TEST-PARENTCHILD TEST-PARENTCHILD-CHILD TEST-PARENTLATEST TEST-PARENTLATEST-CHILD TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-FEAT003-ATV TEST-FEAT003-PKGBIND TEST-FEAT003-PKGBIND-QUOTED TEST-FEATPARENT TEST-FEATPARENT-CHILD TEST-PARENTCHILD TEST-PARENTCHILD-CHILD TEST-PARENTCHILD-QUOTED TEST-PARENTCHILD-QUOTED-CHILD TEST-PARENTSTATUS TEST-PARENTSTATUS-CHILD TEST-PARENTLATEST TEST-PARENTLATEST-CHILD TEST-PARENTLATEST-STALE TEST-PARENTLATEST-STALE-CHILD TEST-PARENTLATEST-REENTRY TEST-PARENTLATEST-REENTRY-CHILD TEST-PARENTDISABLED TEST-PARENTDISABLED-CHILD TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
 TEMP_PACKAGE_INDEXES=()
 
 restore_policy() {
@@ -16,6 +16,386 @@ restore_policy() {
   if [[ -f "$EVIDENCE_POLICY_MALFORMED_BAK" ]]; then
     mv "$EVIDENCE_POLICY_MALFORMED_BAK" "$EVIDENCE_POLICY"
   fi
+}
+
+write_test_policy() {
+  local fixture="$1"
+  cat <<'EOF' > "$EVIDENCE_POLICY"
+version: 2026-06-23.test
+profiles:
+  standard:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  routine:
+    phases:
+      - requirements
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates: []
+    max_reentry: 2
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+  high_risk:
+    phases:
+      - requirements
+      - design
+      - test-plan
+      - implementation
+      - code-review
+      - test-report
+      - release
+    human_gates:
+      - requirements
+      - design
+      - test-plan
+      - code-review
+      - test-report
+      - release
+    max_reentry: 3
+    required_artifacts:
+      requirements:
+        - PRD.md
+        - user-stories.md
+        - acceptance-criteria.md
+        - review-log.md
+      design:
+        - architecture.md
+        - review-log.md
+      test-plan:
+        - test-strategy.md
+        - test-cases.md
+        - review-log.md
+      implementation:
+        - implementation-plan.md
+        - changed-files.md
+        - coding-log.md
+        - review-log.md
+      code-review:
+        - ai-review.md
+        - security-review.md
+        - review-log.md
+      test-report:
+        - test-execution-summary.md
+        - coverage-report.md
+        - review-log.md
+      release:
+        - release-notes.md
+        - known-issues.md
+        - retro.md
+        - review-log.md
+EOF
+
+  case "$fixture" in
+    malformed_package_files)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+EOF
+      ;;
+    malformed_gate_bindings)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked:
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+    malformed_parent_child_release)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children:
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+    missing_parent_child_bindings)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+    malformed_parent_child_fields)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+    quoted_gate_bindings)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: "true"
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+    quoted_parent_child_release)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: "require"
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: 'true'
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: "true"
+    require_pass_result: 'true'
+EOF
+      ;;
+    compatibility_matrix_only)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  gate_bindings:
+    require_in_artifacts_checked: false
+compatibility:
+  human_readable_evidence:
+    when_missing: fallback
+    fallback_required_package_files:
+      - matrix.md
+EOF
+      ;;
+    quoted_compatibility_matrix_only)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  gate_bindings:
+    require_in_artifacts_checked: false
+compatibility:
+  human_readable_evidence:
+    when_missing: "fallback" # comment should be ignored
+    fallback_required_package_files:
+      - matrix.md
+EOF
+      ;;
+    parent_child_disabled)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: ignore
+  require_artifacts_checked_bindings: []
+  child_evidence:
+    require_section: false
+    required_fields: []
+  latest_gate:
+    require_binding: false
+    require_pass_result: false
+EOF
+      ;;
+    *)
+      cat <<'EOF' >> "$EVIDENCE_POLICY"
+human_readable_evidence:
+  required_package_files:
+    - matrix.md
+    - package-evidence-index.md
+  gate_bindings:
+    require_in_artifacts_checked: true
+compatibility:
+  human_readable_evidence:
+    when_missing: error
+parent_child_release:
+  when_parent_has_children: require
+  require_artifacts_checked_bindings:
+    - child_package
+    - child_latest_gate
+    - child_evidence_index
+  child_evidence:
+    require_section: true
+    required_fields:
+      - status
+      - package
+      - latest_gate
+      - evidence_index
+  latest_gate:
+    require_binding: true
+    require_pass_result: true
+EOF
+      ;;
+  esac
 }
 
 ensure_gate_binding() {
@@ -194,134 +574,7 @@ echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring e
 
 # Test 0b: malformed required_package_files must fail instead of using compatibility fallback
 mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
-cat > "$EVIDENCE_POLICY" <<'EOF'
-version: 2026-06-22.1
-profiles:
-  standard:
-    phases:
-      - requirements
-      - design
-      - test-plan
-      - implementation
-      - code-review
-      - test-report
-      - release
-    human_gates:
-      - requirements
-    max_reentry: 3
-    required_artifacts:
-      requirements:
-        - PRD.md
-        - user-stories.md
-        - acceptance-criteria.md
-        - review-log.md
-      design:
-        - architecture.md
-        - review-log.md
-      test-plan:
-        - test-strategy.md
-        - test-cases.md
-        - review-log.md
-      implementation:
-        - implementation-plan.md
-        - changed-files.md
-        - coding-log.md
-        - review-log.md
-      code-review:
-        - ai-review.md
-        - review-log.md
-      test-report:
-        - test-execution-summary.md
-        - coverage-report.md
-        - review-log.md
-      release:
-        - release-notes.md
-        - known-issues.md
-        - retro.md
-        - review-log.md
-  routine:
-    phases:
-      - requirements
-      - implementation
-      - code-review
-      - test-report
-      - release
-    human_gates: []
-    max_reentry: 2
-    required_artifacts:
-      requirements:
-        - PRD.md
-        - user-stories.md
-        - acceptance-criteria.md
-        - review-log.md
-      implementation:
-        - implementation-plan.md
-        - changed-files.md
-        - coding-log.md
-        - review-log.md
-      code-review:
-        - ai-review.md
-        - review-log.md
-      test-report:
-        - test-execution-summary.md
-        - coverage-report.md
-        - review-log.md
-      release:
-        - release-notes.md
-        - known-issues.md
-        - retro.md
-        - review-log.md
-  high_risk:
-    phases:
-      - requirements
-      - design
-      - test-plan
-      - implementation
-      - code-review
-      - test-report
-      - release
-    human_gates:
-      - requirements
-      - design
-      - test-plan
-      - code-review
-      - test-report
-      - release
-    max_reentry: 3
-    required_artifacts:
-      requirements:
-        - PRD.md
-        - user-stories.md
-        - acceptance-criteria.md
-        - review-log.md
-      design:
-        - architecture.md
-        - review-log.md
-      test-plan:
-        - test-strategy.md
-        - test-cases.md
-        - review-log.md
-      implementation:
-        - implementation-plan.md
-        - changed-files.md
-        - coding-log.md
-        - review-log.md
-      code-review:
-        - ai-review.md
-        - security-review.md
-        - review-log.md
-      test-report:
-        - test-execution-summary.md
-        - coverage-report.md
-        - review-log.md
-      release:
-        - release-notes.md
-        - known-issues.md
-        - retro.md
-        - review-log.md
-human_readable_evidence:
-  required_package_files:
-EOF
+write_test_policy malformed_package_files
 if output=$("$SCRIPT" FEAT-003 2>&1); then
   echo "FAIL: FEAT-003 should fail when required_package_files is malformed"
   exit 1
@@ -338,6 +591,62 @@ output=$("$SCRIPT" FEAT-003 2>&1) || {
   exit 1
 }
 echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring malformed policy"; exit 1; }
+
+# Test 0c: malformed gate_bindings must fail closed instead of disabling package evidence binding checks
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy malformed_gate_bindings
+if output=$("$SCRIPT" FEAT-003 2>&1); then
+  echo "FAIL: FEAT-003 should fail when gate_bindings policy is malformed"
+  exit 1
+fi
+echo "$output" | grep -q "invalid human_readable_evidence.gate_bindings.require_in_artifacts_checked" || {
+  echo "FAIL: expected malformed gate_bindings error"
+  echo "$output"
+  exit 1
+}
+restore_policy
+
+# Test 0d: malformed parent_child_release must fail closed instead of disabling child evidence enforcement
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy malformed_parent_child_release
+if output=$("$SCRIPT" FEAT-PARENT 2>&1); then
+  echo "FAIL: FEAT-PARENT should fail when parent_child_release policy is malformed"
+  exit 1
+fi
+echo "$output" | grep -q "invalid parent_child_release.when_parent_has_children" || {
+  echo "FAIL: expected malformed parent_child_release error"
+  echo "$output"
+  exit 1
+}
+restore_policy
+
+# Test 0e: missing parent_child_release require_artifacts_checked_bindings must fail closed
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy missing_parent_child_bindings
+if output=$("$SCRIPT" FEAT-PARENT 2>&1); then
+  echo "FAIL: FEAT-PARENT should fail when parent_child_release bindings policy is missing"
+  exit 1
+fi
+echo "$output" | grep -q "invalid parent_child_release.require_artifacts_checked_bindings" || {
+  echo "FAIL: expected missing parent_child_release bindings error"
+  echo "$output"
+  exit 1
+}
+restore_policy
+
+# Test 0f: malformed parent_child_release child_evidence.required_fields must fail closed
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy malformed_parent_child_fields
+if output=$("$SCRIPT" FEAT-PARENT 2>&1); then
+  echo "FAIL: FEAT-PARENT should fail when parent_child_release child fields policy is malformed"
+  exit 1
+fi
+echo "$output" | grep -q "invalid parent_child_release.child_evidence.required_fields" || {
+  echo "FAIL: expected malformed parent_child_release child fields error"
+  echo "$output"
+  exit 1
+}
+restore_policy
 
 # Test 1: FEAT-003 demo package passes
 output=$("$SCRIPT" FEAT-003 2>&1) || { echo "FAIL: FEAT-003 should pass"; echo "$output"; exit 1; }
@@ -476,6 +785,36 @@ echo "$output" | grep -q "missing traceability/TEST-NOINDEX/package-evidence-ind
 }
 echo "PASS: package evidence index enforce check works"
 
+# Test 5c: compatibility fallback required package files come from policy, not verifier defaults
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy compatibility_matrix_only
+output=$("$SCRIPT" --enforce TEST-NOINDEX 2>&1) || {
+  echo "FAIL: TEST-NOINDEX enforce should pass when compatibility fallback requires only matrix.md"
+  echo "$output"
+  exit 1
+}
+echo "$output" | grep -q "PASS" || {
+  echo "FAIL: expected PASS when policy compatibility fallback omits package-evidence-index"
+  echo "$output"
+  exit 1
+}
+restore_policy
+
+# Test 5d: quoted/commented compatibility when_missing fallback still activates policy fallback files
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy quoted_compatibility_matrix_only
+output=$("$SCRIPT" --enforce TEST-NOINDEX 2>&1) || {
+  echo "FAIL: TEST-NOINDEX enforce should pass when quoted/commented compatibility fallback requires only matrix.md"
+  echo "$output"
+  exit 1
+}
+echo "$output" | grep -q "PASS" || {
+  echo "FAIL: expected PASS when quoted/commented when_missing parses as fallback"
+  echo "$output"
+  exit 1
+}
+restore_policy
+
 # Test 6: copied FEAT-003 fixture passes when required contract bindings are present
 if [[ -d "$ROOT/.ai/packages/FEAT-003" ]]; then
   copy_feat003_fixture TEST-FEAT003
@@ -508,6 +847,21 @@ if "$SCRIPT" TEST-FEAT003-PKGBIND 2>/dev/null; then
   exit 1
 fi
 echo "PASS: package evidence gate binding check works"
+
+# Test 6ab: quoted gate_bindings true still enforces package evidence gate bindings
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy quoted_gate_bindings
+copy_feat003_fixture TEST-FEAT003-PKGBIND-QUOTED
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND-QUOTED/gates/implementation-1.md" "artifacts/TEST-FEAT003-PKGBIND-QUOTED/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND-QUOTED/gates/release-1.md" "artifacts/TEST-FEAT003-PKGBIND-QUOTED/07-release-retro/retro.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND-QUOTED/gates/requirements-1.md" "traceability/TEST-FEAT003-PKGBIND-QUOTED/matrix.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND-QUOTED/gates/requirements-1.md" "traceability/TEST-FEAT003-PKGBIND-QUOTED/package-evidence-index.md"
+if "$SCRIPT" TEST-FEAT003-PKGBIND-QUOTED 2>/dev/null; then
+  echo "FAIL: TEST-FEAT003-PKGBIND-QUOTED should fail when quoted gate_bindings still requires package evidence gate bindings"
+  exit 1
+fi
+restore_policy
+echo "PASS: quoted gate_bindings syntax works"
 
 # Test 6b: incomplete gate artifact bindings fail verification
 copy_feat003_fixture TEST-BINDING
@@ -564,6 +918,72 @@ if "$SCRIPT" TEST-PARENTCHILD 2>/dev/null; then
 fi
 echo "PASS: parent-child release evidence check works"
 
+# Test 6cc: quoted parent_child_release scalars still enforce child evidence requirements
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy quoted_parent_child_release
+copy_feat_parent_fixture TEST-PARENTCHILD-QUOTED
+copy_feat_child_fixture TEST-PARENTCHILD-QUOTED-CHILD
+retarget_parent_child_references TEST-PARENTCHILD-QUOTED TEST-PARENTCHILD-QUOTED-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD-QUOTED/gates/implementation-1.md" "artifacts/TEST-PARENTCHILD-QUOTED/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD-QUOTED/gates/release-1.md" "artifacts/TEST-PARENTCHILD-QUOTED/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD-QUOTED/gates/release-1.md" "artifacts/TEST-PARENTCHILD-QUOTED/07-release-retro/retro.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTCHILD-QUOTED/gates/release-1.md" "TEST-PARENTCHILD-QUOTED-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text()
+text = text.replace(f"  - .ai/packages/{child_id}/package.yaml\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/requirements-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/design-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/test-plan-1.md\n", "", 1)
+text = text.replace(f"  - traceability/{child_id}/package-evidence-index.md\n", "", 1)
+lines = []
+skip = False
+for line in text.splitlines(keepends=True):
+    if line.startswith("child_evidence:"):
+        skip = True
+        continue
+    if skip and not line.startswith("  "):
+        skip = False
+    if skip:
+        continue
+    lines.append(line)
+path.write_text("".join(lines))
+PY
+if "$SCRIPT" TEST-PARENTCHILD-QUOTED 2>/dev/null; then
+  echo "FAIL: TEST-PARENTCHILD-QUOTED should fail when quoted parent_child_release values still require child evidence"
+  exit 1
+fi
+restore_policy
+echo "PASS: quoted parent_child_release syntax works"
+
+copy_feat_parent_fixture TEST-PARENTSTATUS
+copy_feat_child_fixture TEST-PARENTSTATUS-CHILD
+retarget_parent_child_references TEST-PARENTSTATUS TEST-PARENTSTATUS-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTSTATUS/gates/implementation-1.md" "artifacts/TEST-PARENTSTATUS/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTSTATUS/gates/release-1.md" "artifacts/TEST-PARENTSTATUS/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTSTATUS/gates/release-1.md" "artifacts/TEST-PARENTSTATUS/07-release-retro/retro.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTSTATUS/gates/release-1.md" "TEST-PARENTSTATUS-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text().replace(
+    "    status: ready_for_merge\n",
+    "    status: ready_for_release\n",
+    1,
+)
+path.write_text(text)
+PY
+if "$SCRIPT" TEST-PARENTSTATUS 2>/dev/null; then
+  echo "FAIL: TEST-PARENTSTATUS should fail when child_evidence.status disagrees with the child manifest"
+  exit 1
+fi
+echo "PASS: parent child status consistency check works"
+
 copy_feat_parent_fixture TEST-PARENTLATEST
 copy_feat_child_fixture TEST-PARENTLATEST-CHILD
 retarget_parent_child_references TEST-PARENTLATEST TEST-PARENTLATEST-CHILD
@@ -587,6 +1007,133 @@ if "$SCRIPT" TEST-PARENTLATEST 2>/dev/null; then
   echo "FAIL: TEST-PARENTLATEST should fail when latest_gate is not referenced in artifacts_checked"; exit 1
 fi
 echo "PASS: parent latest_gate consistency check works"
+
+copy_feat_parent_fixture TEST-PARENTLATEST-STALE
+copy_feat_child_fixture TEST-PARENTLATEST-STALE-CHILD
+retarget_parent_child_references TEST-PARENTLATEST-STALE TEST-PARENTLATEST-STALE-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE/gates/implementation-1.md" "artifacts/TEST-PARENTLATEST-STALE/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE/gates/release-1.md" "artifacts/TEST-PARENTLATEST-STALE/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE/gates/release-1.md" "artifacts/TEST-PARENTLATEST-STALE/07-release-retro/retro.md"
+cp "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE-CHILD/gates/test-plan-1.md" \
+  "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE-CHILD/gates/implementation-1.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTLATEST-STALE-CHILD/gates/implementation-1.md" "TEST-PARENTLATEST-STALE-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text()
+text = text.replace("# Gate: test-plan (attempt 1)", "# Gate: implementation (attempt 1)", 1)
+text = text.replace(f"artifacts/{child_id}/03-test-plan/", f"artifacts/{child_id}/04-implementation/")
+path.write_text(text)
+PY
+if "$SCRIPT" TEST-PARENTLATEST-STALE 2>/dev/null; then
+  :
+else
+  echo "FAIL: TEST-PARENTLATEST-STALE should pass when a later-phase pass gate exists on disk but the child manifest is still archived at test-plan"
+  exit 1
+fi
+echo "PASS: parent latest_gate archived phase wins over stale later pass gates"
+
+copy_feat_parent_fixture TEST-PARENTLATEST-REENTRY
+copy_feat_child_fixture TEST-PARENTLATEST-REENTRY-CHILD
+retarget_parent_child_references TEST-PARENTLATEST-REENTRY TEST-PARENTLATEST-REENTRY-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY/gates/implementation-1.md" "artifacts/TEST-PARENTLATEST-REENTRY/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY/gates/release-1.md" "artifacts/TEST-PARENTLATEST-REENTRY/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY/gates/release-1.md" "artifacts/TEST-PARENTLATEST-REENTRY/07-release-retro/retro.md"
+cp "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY-CHILD/gates/test-plan-1.md" \
+  "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY-CHILD/gates/implementation-1.md"
+python3 - <<'PY' \
+  "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY-CHILD/gates/implementation-1.md" \
+  "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY-CHILD/package.yaml" \
+  "$ROOT/.ai/packages/TEST-PARENTLATEST-REENTRY/gates/release-1.md" \
+  "TEST-PARENTLATEST-REENTRY-CHILD"
+from pathlib import Path
+import sys
+
+gate_path = Path(sys.argv[1])
+package_path = Path(sys.argv[2])
+parent_gate_path = Path(sys.argv[3])
+child_id = sys.argv[4]
+
+gate_text = gate_path.read_text()
+gate_text = gate_text.replace("# Gate: test-plan (attempt 1)", "# Gate: implementation (attempt 1)", 1)
+gate_text = gate_text.replace(f"artifacts/{child_id}/03-test-plan/", f"artifacts/{child_id}/04-implementation/")
+gate_path.write_text(gate_text)
+
+package_text = package_path.read_text()
+package_text = package_text.replace("status: ready_for_merge\n", "status: in_progress\n", 1)
+package_text = package_text.replace(
+    "  test-plan:\n    status: archived\n    artifact_version: v1\nchildren: []\n",
+    "  test-plan:\n    status: archived\n    artifact_version: v1\n  implementation:\n    status: in_progress\nchildren: []\n",
+    1,
+)
+package_path.write_text(package_text)
+
+parent_gate_text = parent_gate_path.read_text()
+parent_gate_text = parent_gate_text.replace(
+    f"  - .ai/packages/{child_id}/gates/test-plan-1.md\n",
+    f"  - .ai/packages/{child_id}/gates/implementation-1.md\n",
+    1,
+)
+parent_gate_text = parent_gate_text.replace(
+    f"    latest_gate: .ai/packages/{child_id}/gates/test-plan-1.md\n",
+    f"    latest_gate: .ai/packages/{child_id}/gates/implementation-1.md\n",
+    1,
+)
+parent_gate_path.write_text(parent_gate_text)
+PY
+if "$SCRIPT" TEST-PARENTLATEST-REENTRY 2>/dev/null; then
+  echo "FAIL: TEST-PARENTLATEST-REENTRY should fail when latest_gate points to a stale retained pass gate beyond the child's current archived phase"
+  exit 1
+fi
+echo "PASS: parent latest_gate archived-phase check works"
+
+# Test 6d: parent-child release enforcement is controlled by policy
+mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_MALFORMED_BAK"
+write_test_policy parent_child_disabled
+copy_feat_parent_fixture TEST-PARENTDISABLED
+copy_feat_child_fixture TEST-PARENTDISABLED-CHILD
+retarget_parent_child_references TEST-PARENTDISABLED TEST-PARENTDISABLED-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTDISABLED/gates/implementation-1.md" "artifacts/TEST-PARENTDISABLED/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTDISABLED/gates/release-1.md" "artifacts/TEST-PARENTDISABLED/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTDISABLED/gates/release-1.md" "artifacts/TEST-PARENTDISABLED/07-release-retro/retro.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTDISABLED/gates/release-1.md" "TEST-PARENTDISABLED-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text()
+text = text.replace(f"  - .ai/packages/{child_id}/package.yaml\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/requirements-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/design-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/test-plan-1.md\n", "", 1)
+text = text.replace(f"  - traceability/{child_id}/package-evidence-index.md\n", "", 1)
+lines = []
+skip = False
+for line in text.splitlines(keepends=True):
+    if line.startswith("child_evidence:"):
+        skip = True
+        continue
+    if skip and not line.startswith("  "):
+        skip = False
+    if skip:
+        continue
+    lines.append(line)
+path.write_text("".join(lines))
+PY
+output=$("$SCRIPT" TEST-PARENTDISABLED 2>&1) || {
+  echo "FAIL: TEST-PARENTDISABLED should pass when parent-child release enforcement is disabled by policy"
+  echo "$output"
+  exit 1
+}
+echo "$output" | grep -q "PASS" || {
+  echo "FAIL: expected PASS when policy disables parent-child release enforcement"
+  echo "$output"
+  exit 1
+}
+restore_policy
 
 # Test 7: failed gate result fails verification
 mkdir -p "$ROOT/.ai/packages/TEST-GATEFAIL/gates"

@@ -41,7 +41,7 @@ Verify child:
 ./scripts/loop-verify.sh FEAT-CHILD
 ```
 
-Stronger L3 behavior remains available through the same verifier: `--enforce` applies the contract from `.ai/contracts/evidence-policy.yaml`, promoting missing package evidence files from warnings to errors. The baseline verifier already checks the required gate bindings.
+Stronger L3 behavior remains available through the same verifier: `--enforce` applies the contract from `.ai/contracts/evidence-policy.yaml`, promoting missing package evidence files from warnings to errors. The same policy also defines the required gate bindings and the parent-child release evidence shape.
 
 ## 3. Run parent release gate
 
@@ -59,9 +59,9 @@ Lifecycle-loop checks **child readiness** before parent release gate passes:
 
 **Evidence:** `.ai/packages/FEAT-PARENT/gates/release-1.md`
 
-For human audit, `traceability/FEAT-PARENT/package-evidence-index.md` is the parent release evidence entry point. It binds child readiness by reference to the child package, child gates, and the child package evidence index rather than copying child artifacts into the parent package.
+For human audit, `traceability/FEAT-PARENT/package-evidence-index.md` is the parent release evidence entry point. It binds child readiness by reference to the child package, the child gate for the package's current archived phase, and the child package evidence index rather than copying child artifacts into the parent package.
 
-For parent-child packages, `scripts/loop-verify.sh` already checks the release gate's child evidence binding shape in baseline mode. Baseline mode also requires each gate's `artifacts_checked` list to bind the package evidence files (`traceability/<id>/matrix.md` and `traceability/<id>/package-evidence-index.md`) alongside the phase artifacts. `--enforce` keeps those checks and additionally treats missing required package evidence files as errors.
+For parent-child packages, `scripts/loop-verify.sh` reads the release-gate requirements from `.ai/contracts/evidence-policy.yaml`. The current policy requires each archived gate's `artifacts_checked` list to bind the package evidence files (`traceability/<id>/matrix.md` and `traceability/<id>/package-evidence-index.md`) alongside the phase artifacts, and it requires the parent release gate to bind child package readiness by reference. `--enforce` keeps those binding checks and additionally treats missing required package evidence files as errors.
 
 ```text
 artifacts_checked:

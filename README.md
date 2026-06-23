@@ -227,7 +227,9 @@ To work on skills here, edit `.ai/skills/` and use the pointer layout under `.cu
 
 Primary human audit entry point per package: `traceability/<id>/package-evidence-index.md`. The trace matrix remains the detailed AC-to-evidence map, while the package evidence index summarizes readiness, latest gates, approvals, waivers, and linked evidence in one place.
 
-Compatibility note: current verifier behavior keeps a fallback for human-readable evidence policy rollout. If `human_readable_evidence` is absent from `.ai/contracts/evidence-policy.yaml`, L3 falls back to requiring `matrix.md` plus `package-evidence-index.md`; if that section is present but malformed, verification fails instead of silently falling back.
+Human-readable package evidence is now contract-defined in `.ai/contracts/evidence-policy.yaml`. The current policy requires both `matrix.md` and `package-evidence-index.md`, requires those files to appear in each archived gate's `artifacts_checked` list, and sets compatibility posture to `when_missing: error` for the `human_readable_evidence` section.
+
+Parent-child release verification is also policy-driven. The current policy enables a light release binding set for parents with children: child package manifest, the child gate for the package's current archived phase, child package evidence index, and a `child_evidence` block that records `status`, `package`, `latest_gate`, and `evidence_index`.
 
 ## Directory layout (consumer project after `devloop init`)
 
