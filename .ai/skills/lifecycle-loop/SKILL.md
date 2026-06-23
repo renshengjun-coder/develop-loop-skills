@@ -67,7 +67,7 @@ You are driving the SDLC loop for one package. Follow these steps in order. **Re
 ### Before each phase
 
 1. Read `.ai/packages/<id>/package.yaml` and list gate files in `.ai/packages/<id>/gates/`.
-2. Load `active_profile` from `classification.yaml` and read `.ai/config/profiles.yaml` for `phases`, `human_gates`, `max_reentry`.
+2. Load `active_profile` from `classification.yaml` and read `.ai/config/profiles.yaml` for `phases`, `human_gates`, `max_reentry`, and the configured evidence policy path.
 3. If this phase is `archived` and its latest gate is `pass`, skip to the next phase.
 4. If an upstream `artifact_version` changed since the last gate for this phase, mark downstream phases `pending` in `package.yaml`, treat affected gates as `stale`, and return to the earliest affected phase.
 5. Load `phases` list for `active_profile` from `profiles.yaml`. **Skip** phases not in the profile (e.g. `routine` skips `design` and `test-plan`). Do not gate skipped phases.
@@ -112,11 +112,12 @@ Perform L2 final check. Phase skills cannot issue gate PASS — only this skill 
 
 ### Checklist (all must pass for `result: pass`)
 
-1. Phase folder has all `required_artifacts` for `active_profile` in `profiles.yaml`.
+1. Phase folder has all `required_artifacts` for `active_profile` in the configured evidence policy. `profiles.yaml` selects the phase list, human gates, and policy reference; it is not the authoritative artifact contract.
 2. `review-log.md` exists with no unresolved **blocking** failures.
 3. Typed trace links present in artifact frontmatter (upstream references for design/test-plan).
 4. Human approval recorded if phase is in `human_gates` (`status: approved` in frontmatter or `approval.md`).
-5. `traceability/<id>/matrix.md` has no blocking gaps for this phase (invoke traceability skill if missing).
+5. `traceability/<id>/matrix.md` and `traceability/<id>/package-evidence-index.md` exist and have no blocking gaps for this phase (invoke traceability skill if missing or stale).
+6. Gate `artifacts_checked` binds the exact artifact paths reviewed for this decision, including the phase artifact set, package evidence files, and child references when applicable.
 
 ### Gate file template
 
@@ -130,14 +131,18 @@ profile: standard
 mode: loop | pipeline
 
 artifacts_checked:
-  - artifacts/<id>/<phase-folder>/<file>.md (v1)
-  - artifacts/<id>/<phase-folder>/review-log.md
+  - artifacts/<id>/<phase-folder>/<file>.md@v1
+  - artifacts/<id>/<phase-folder>/review-log.md@v1
+  - traceability/<id>/matrix.md
+  - traceability/<id>/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
   - [x] Required artifacts exist for profile
   - [x] Traces to upstream requirements present
   - [x] Human approval recorded (if required)
+  - [x] Package evidence index and matrix reflect this phase outcome
+  - [x] Exact evidence bindings recorded in artifacts_checked
 
 findings:
   - severity: blocking | non-blocking
@@ -149,6 +154,7 @@ next: <next-phase-name | same-phase-for-reentry>
 ```
 
 Never set `result: pass` with unchecked checklist items or open blocking findings.
+Treat `artifacts_checked` as the package-level audit binding for the gate: list the exact evidence set a reviewer would need to reconstruct the decision, and do not mix current and stale evidence snapshots in one gate record.
 
 ## Loop vs Pipeline
 
@@ -193,21 +199,24 @@ children:
     relationship: implements   # implements | depends_on
 ```
 
-### Before parent release or design gate (when children exist)
+### Before parent release gate (when children exist)
 
 1. Read each `children[].id` → load `.ai/packages/<child_id>/package.yaml`.
 2. Load each child's `profile` from `package.yaml` (or `classification.yaml` if package profile is unset).
-3. **Child readiness:** each child must have every phase **listed in that child's `package.yaml`** `archived` with latest gate `result: pass`. A child may run a subset of its profile phases (e.g. 3-phase MVP child under `standard` profile); only phases present in the child's manifest are checked.
-4. If any child fails readiness → parent gate `result: fail` with finding listing child id and missing phase.
-5. Parent gate `artifacts_checked` includes child package paths:
+3. For the light parent-child release check currently implemented, require release-gate references that point to each child's package state and latest cited child gate evidence.
+4. If any required child reference is missing or inconsistent → parent `release` gate `result: fail` with a finding listing the child id and missing evidence.
+5. Parent `release` gate `artifacts_checked` includes child package paths:
    - `.ai/packages/<child_id>/package.yaml`
+   - `traceability/<child_id>/package-evidence-index.md`
    - `.ai/packages/<child_id>/gates/<latest-pass-per-phase>`
+6. Parent `release` gate includes a readable `child_evidence:` block that names each child's status, package manifest, latest gate reference, and package evidence index so the package-level audit trail stays human-readable as well as machine-checkable.
 
 ### Constraints
 
 - Do not copy child artifacts into parent `artifacts/` folder.
 - Parent PRD may reference child IDs in scope; traceability stays per-package.
-- Child packages run `/devloop run` independently; parent `/devloop run` checks children only at gate time.
+- Parent package evidence indexes summarize child release-readiness references by reference; they do not duplicate child artifacts.
+- Child packages run `/devloop run` independently; parent `/devloop run` currently performs only the light release-gate child evidence check described above.
 
 ## Constraints
 

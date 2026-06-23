@@ -39,6 +39,8 @@ Create or revise under `artifacts/<package_id>/05-code-review/`:
 | `blocking-issues.md` | Canonical list of must-fix findings before advance |
 | `non-blocking-suggestions.md` | Canonical list of optional improvements |
 
+Treat `ai-review.md` and `review-log.md` as the core human-readable evidence that gates and package evidence indexes should cite directly. `blocking-issues.md` should stay aligned with that audit trail whenever blockers exist or blocker history is part of the evidence set. The other lens artifacts remain phase evidence even when a lower-risk profile does not require each one for L2/L3 blocking checks.
+
 ### Frontmatter on generated review artifacts
 
 ```yaml
@@ -132,9 +134,10 @@ If `code-review` is included (`high_risk`: **yes**):
 
 1. Keep all seven review artifacts `status: draft` and present the `blocking-issues.md` summary and resolution history.
 2. Verify `blocking_count: 0`, all self-review checks pass, and affected findings were rerun.
-3. Wait for explicit human sign-off.
-4. Write `approval.md` with approver, date, and `blocking_count: 0`.
-5. Set all seven review artifacts' frontmatter `status: approved`.
+3. Refresh `traceability/<package_id>/package-evidence-index.md` so the package audit view reflects current code-review status, latest gate-ready evidence, and any resolved blockers before sign-off.
+4. Wait for explicit human sign-off.
+5. Write `approval.md` with approver, date, and `blocking_count: 0`.
+6. Set all seven review artifacts' frontmatter `status: approved`.
 
 If `code-review` is not included, set all seven review artifacts' frontmatter `status: reviewed` only after `blocking_count: 0` and self-review passes.
 
@@ -143,7 +146,7 @@ If `code-review` is not included, set all seven review artifacts' frontmatter `s
 1. Bump `version` in generated review artifact frontmatter if this is a revision.
 2. Verify the recorded repository comparison is current, every changed path remains accounted for, `blocking-issues.md` retains all resolved entries with `blocking_count: 0`, and all seven review artifacts are `approved` for a human gate or `reviewed` otherwise.
 3. Update `.ai/packages/<package_id>/package.yaml` → `phases.code-review.status: archived`, `artifact_version: v<n>`.
-4. Load `.ai/skills/traceability/SKILL.md` and update matrix Status or Notes when code-review findings change AC coverage or status.
+4. Load `.ai/skills/traceability/SKILL.md` and update matrix Status or Notes when code-review findings change AC coverage or status, then refresh `traceability/<package_id>/package-evidence-index.md` so it cites the archived code-review evidence and any approval.
 5. **Do not** write gate PASS — lifecycle-loop owns L2.
 
 ## Quality criteria
@@ -152,9 +155,10 @@ If `code-review` is not included, set all seven review artifacts' frontmatter `s
 - Every path in `changed-files.md` is inspected and has an evidence-backed disposition; missing, deleted, generated, and non-code paths are explicitly accounted for
 - Every finding is reproducible from cited repository evidence, with `file:line` when possible
 - `ai-review.md` records conformance for every AC and inventories every applicable archived design decision, contract, constraint, and tradeoff
+- `blocking-issues.md` remains the canonical human-readable blocker ledger and is reflected accurately in the package evidence index
 - All five review lenses are present; `security-review.md` is substantive for `high_risk`
 - Blocking issues and non-blocking suggestions are separated; the ledger retains timestamped transition history; review-local blockers rerun code review in phase, while upstream blockers stale and rerun downstream phases
-- Archive occurs only with `blocking_count: 0` and all seven review artifacts in the required `approved` or `reviewed` status
+- Archive occurs only with `blocking_count: 0`, all seven review artifacts in the required `approved` or `reviewed` status, and trace/package audit views refreshed to the same evidence revision
 - Package and traceability state are current, and no phase artifact claims gate PASS
 
 See `reference.md` for concise review and approval templates.

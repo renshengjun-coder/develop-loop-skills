@@ -76,6 +76,7 @@ Use this frontmatter on all seven generated report artifacts with the appropriat
 ### Evidence and reporting rules
 
 - `test-execution-summary.md` is the canonical run ledger. Record the frozen upstream input set, tested source snapshot/code-review reconciliation, secret-safe execution environment identity, complete AC-to-TC disposition map, and every planned or derived TC exactly once in the current-result table; retain prior run evidence in chronological history.
+- `release-recommendation.md` is the canonical human-readable release posture for this phase. It must match the outcomes shown in `test-execution-summary.md`, `coverage-report.md`, `defects.md`, and the package evidence index; it may not present skipped, failed, waived, or N/A results as a clean pass.
 - Record actual stdout/stderr after redacting secrets and credentials without hiding result or failure semantics. If output must be shortened, label the excerpt as truncated, preserve the exact result summary and failure text, and link a secret-safe stable full-output artifact when one exists. Do not paraphrase away warnings or failures.
 - Break unit, integration, and E2E results down by executed command and TC. A level report may be N/A only when it names the changed scope inspected and explains why that level does not apply.
 - In `coverage-report.md`, reconcile every source, test, documentation, configuration, generated, and deleted path from `changed-files.md`. Report measured line/branch percentages only from actual tool output. When measurement is unavailable, state `N/A`, the attempted or missing command/tool, affected paths, and resulting risk; never estimate percentages.
@@ -115,19 +116,19 @@ Read the active profile's `human_gates` in `.ai/config/profiles.yaml`.
 If `test-report` is included in `human_gates` (`high_risk`: **yes**):
 
 1. Keep all seven report artifacts `status: draft`.
-2. Revalidate the exact upstream input set and source snapshot, then present the execution summary, defects, coverage gaps, and release recommendation without hiding failures or N/A results.
+2. Revalidate the exact upstream input set and source snapshot, refresh `traceability/<package_id>/package-evidence-index.md`, then present the execution summary, defects, coverage gaps, and release recommendation without hiding failures or N/A results.
 3. Wait for explicit human sign-off.
 4. Write `approval.md` with approver, date, decision, acknowledged release recommendation, and all seven exact artifact paths and frozen versions.
 5. Revalidate the upstream input set/source snapshot and verify the seven reports still match those exact versions, then set all seven report artifacts' frontmatter `status: approved`. This status transition is the only allowed post-sign-off change; after it, any correction requires a new version and new approval.
 
-If `test-report` is not included in `human_gates`, revalidate the upstream input set/source snapshot, then set all seven report artifacts' frontmatter `status: reviewed` after self-review passes. Review status means the evidence is accepted for archive; it never converts a failed or skipped validation into a pass.
+If `test-report` is not included in `human_gates`, revalidate the upstream input set/source snapshot, refresh `traceability/<package_id>/package-evidence-index.md`, then set all seven report artifacts' frontmatter `status: reviewed` after self-review passes. Review status means the evidence is accepted for archive; it never converts a failed or skipped validation into a pass.
 
 ## Step 5: Archive
 
 1. Revalidate the exact upstream input set and tested source snapshot, verify all self-review checks pass, verify no unwaived skipped validation remains, verify all seven reports have the required `approved` or `reviewed` status, and require `approval.md` when the active profile includes the test-report human gate.
 2. Do not change report content, status, or version during archive. Archive binds the already reviewed/approved frozen set.
 3. Update `.ai/packages/<package_id>/package.yaml` -> `phases.test-report.status: archived`, `artifact_version: v<n>` using the frozen set version.
-4. Load `.ai/skills/traceability/SKILL.md` and update the matrix **Status** and **Notes** per AC:
+4. Load `.ai/skills/traceability/SKILL.md` and update the matrix **Status** and **Notes** per AC, then refresh `traceability/<package_id>/package-evidence-index.md` so the package audit entry point reflects the archived test-report evidence and release posture:
    - `covered` only when all required validations passed.
    - `failed` when any required validation failed, was skipped, or lacks executable evidence; retain `failed` when a waiver permits a `go`, and cite the waiver.
    - Cite current TC IDs, frozen report version, defects/gaps, waivers, and material N/A rationale in Notes.
@@ -140,12 +141,13 @@ If `test-report` is not included in `human_gates`, revalidate the upstream input
 - Commands, working directory, UTC timestamps, duration, exit code, secret-safe execution environment/dependency/service/fixture identity, and actual output make every result reproducible
 - Test evidence is bound to the exact versioned upstream input set and reviewed source snapshot; drift routes from the earliest changed phase and triggers stale/re-entry
 - All seven reports contain applicable `validates` traces and agree on TC/AC outcomes
+- `release-recommendation.md` states the honest package release posture and stays aligned with defects, coverage gaps, waivers, matrix status, and the package evidence index
 - Unit, integration, E2E, and coverage N/A claims are specific, justified, and never presented as passes
 - Every changed path is reconciled in coverage reporting; measured percentages come only from actual coverage output
 - Failed and skipped validations remain visible, route to the earliest affected phase, and force `no-go` unless an exact approved waiver permits `go`
 - Prior failures close only with root-cause/remediation/resolution evidence or explicit waiver
 - All seven versions are assigned before self-review; high-risk approval enumerates them; archive never mutates them
-- Archive occurs only after self-review passes and required high-risk human approval exists
+- Archive occurs only after self-review passes, required high-risk human approval exists, and package audit views are refreshed to the same frozen evidence revision
 - Package and per-AC traceability state are current, and no phase artifact claims gate PASS
 
 See `reference.md` for concise execution, coverage, defect, recommendation, and approval templates.
