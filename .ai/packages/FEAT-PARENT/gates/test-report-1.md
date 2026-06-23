@@ -7,7 +7,10 @@ mode: loop
 artifacts_checked:
   - artifacts/FEAT-PARENT/06-test-report/test-execution-summary.md (v1)
   - artifacts/FEAT-PARENT/06-test-report/coverage-report.md (v1)
+  - artifacts/FEAT-PARENT/06-test-report/release-recommendation.md
   - artifacts/FEAT-PARENT/06-test-report/review-log.md
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

@@ -38,8 +38,10 @@ Each phase archives with L1 `review-log.md` and L2 gate pass. Child ends at `sta
 Verify child:
 
 ```bash
-./scripts/devloop-verify.sh FEAT-CHILD
+./scripts/loop-verify.sh FEAT-CHILD
 ```
+
+Stronger L3 behavior remains available through the same verifier: `--enforce` applies the contract from `.ai/contracts/evidence-policy.yaml`, promoting missing package evidence files from warnings to errors. The same policy also defines the required gate bindings and the parent-child release evidence shape.
 
 ## 3. Run parent release gate
 
@@ -57,12 +59,19 @@ Lifecycle-loop checks **child readiness** before parent release gate passes:
 
 **Evidence:** `.ai/packages/FEAT-PARENT/gates/release-1.md`
 
+For human audit, `traceability/FEAT-PARENT/package-evidence-index.md` is the parent release evidence entry point. It binds child readiness by reference to the child package, the child gate for the package's current archived phase, and the child package evidence index rather than copying child artifacts into the parent package.
+
+For parent-child packages, `scripts/loop-verify.sh` reads the release-gate requirements from `.ai/contracts/evidence-policy.yaml`. The current policy requires each archived gate's `artifacts_checked` list to bind the package evidence files (`traceability/<id>/matrix.md` and `traceability/<id>/package-evidence-index.md`) alongside the phase artifacts, and it requires the parent release gate to bind child package readiness by reference. `--enforce` keeps those binding checks and additionally treats missing required package evidence files as errors.
+
 ```text
 artifacts_checked:
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
   - .ai/packages/FEAT-CHILD/package.yaml
   - .ai/packages/FEAT-CHILD/gates/requirements-1.md
   - .ai/packages/FEAT-CHILD/gates/design-1.md
   - .ai/packages/FEAT-CHILD/gates/test-plan-1.md
+  - traceability/FEAT-CHILD/package-evidence-index.md
 ```
 
 ### Fail example
@@ -81,6 +90,6 @@ Child FEAT-CHILD not ready: test-plan phase not archived
 ## Verify
 
 ```bash
-./scripts/devloop-verify.sh FEAT-CHILD
-./scripts/devloop-verify.sh FEAT-PARENT
+./scripts/loop-verify.sh FEAT-CHILD
+./scripts/loop-verify.sh FEAT-PARENT
 ```

@@ -8,6 +8,8 @@ artifacts_checked:
   - artifacts/FEAT-003/03-test-plan/test-strategy.md (v1)
   - artifacts/FEAT-003/03-test-plan/test-cases.md (v1)
   - artifacts/FEAT-003/03-test-plan/review-log.md
+  - traceability/FEAT-003/matrix.md
+  - traceability/FEAT-003/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

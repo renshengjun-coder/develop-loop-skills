@@ -8,6 +8,8 @@ artifacts_checked:
   - artifacts/FEAT-001/02-design/architecture.md (v1)
   - artifacts/FEAT-001/02-design/api-design.md (v1)
   - artifacts/FEAT-001/02-design/review-log.md
+  - traceability/FEAT-001/matrix.md
+  - traceability/FEAT-001/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

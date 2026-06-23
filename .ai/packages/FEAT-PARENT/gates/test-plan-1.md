@@ -8,6 +8,8 @@ artifacts_checked:
   - artifacts/FEAT-PARENT/03-test-plan/test-strategy.md (v1)
   - artifacts/FEAT-PARENT/03-test-plan/test-cases.md (v1)
   - artifacts/FEAT-PARENT/03-test-plan/review-log.md
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

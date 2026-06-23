@@ -7,6 +7,8 @@ mode: loop
 artifacts_checked:
   - artifacts/FEAT-PARENT/05-code-review/ai-review.md (v1)
   - artifacts/FEAT-PARENT/05-code-review/review-log.md
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

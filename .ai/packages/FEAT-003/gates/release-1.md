@@ -7,7 +7,10 @@ mode: loop
 artifacts_checked:
   - artifacts/FEAT-003/07-release-retro/release-notes.md (v1)
   - artifacts/FEAT-003/07-release-retro/known-issues.md (v1)
-  - artifacts/FEAT-003/07-release-retro/review-log.md
+  - artifacts/FEAT-003/07-release-retro/retro.md (v1)
+  - artifacts/FEAT-003/07-release-retro/review-log.md (v1)
+  - traceability/FEAT-003/matrix.md
+  - traceability/FEAT-003/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

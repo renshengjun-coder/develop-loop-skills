@@ -11,8 +11,13 @@ PRD.md (v1, approved)
   → architecture.md (derives_from PRD@v1)
   → test-cases.md (verifies AC-001..003)
   → gates/requirements-1.md, design-1.md, test-plan-1.md
+  → traceability/FEAT-001/package-evidence-index.md
   → traceability/FEAT-001/matrix.md
 ```
+
+Primary audit entry point: `traceability/FEAT-001/package-evidence-index.md`. Use it to review package readiness first, then drill into `matrix.md` and the archived gates.
+
+Verification posture: L3 is contract-driven through `scripts/loop-verify.sh` and `.ai/contracts/evidence-policy.yaml`. `--enforce` adds stricter checks for required human-readable package evidence files on top of the baseline structural verification.
 
 ## Loop mode E2E (equivalent steps)
 
@@ -46,7 +51,9 @@ Design gate fail on attempt 1 → design-skill re-invoked with findings → `gat
 | Loop E2E L1+L2 | `review-log.md` + `gates/*.md` |
 | Pipeline stop/resume | Narrative above |
 | Re-entry | Supported by loop skill; demo shows single-pass |
-| L3 verify | `./scripts/devloop-verify.sh FEAT-001` |
+| L3 verify | `./scripts/loop-verify.sh FEAT-001` |
+| Stronger L3 behavior | `./scripts/loop-verify.sh --enforce FEAT-001` applies evidence-policy-driven package evidence checks |
+| Package audit index | `traceability/FEAT-001/package-evidence-index.md` |
 | Trace matrix | `traceability/FEAT-001/matrix.md` |
 | Gate artifacts_checked | Gate files list real paths |
 | Audit from Git | This walkthrough + linked files |
