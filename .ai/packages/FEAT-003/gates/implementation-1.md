@@ -7,7 +7,8 @@ mode: loop
 artifacts_checked:
   - artifacts/FEAT-003/04-implementation/implementation-plan.md (v1)
   - artifacts/FEAT-003/04-implementation/changed-files.md (v1)
-  - artifacts/FEAT-003/04-implementation/review-log.md
+  - artifacts/FEAT-003/04-implementation/coding-log.md (v1)
+  - artifacts/FEAT-003/04-implementation/review-log.md (v1)
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

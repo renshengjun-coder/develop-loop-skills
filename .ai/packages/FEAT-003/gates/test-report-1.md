@@ -7,7 +7,8 @@ mode: loop
 artifacts_checked:
   - artifacts/FEAT-003/06-test-report/test-execution-summary.md (v1)
   - artifacts/FEAT-003/06-test-report/coverage-report.md (v1)
-  - artifacts/FEAT-003/06-test-report/review-log.md
+  - artifacts/FEAT-003/06-test-report/release-recommendation.md (v1)
+  - artifacts/FEAT-003/06-test-report/review-log.md (v1)
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
