@@ -6,7 +6,7 @@ SCRIPT="$ROOT/scripts/loop-verify.sh"
 EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
 EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
 EVIDENCE_POLICY_MALFORMED_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.malformedbak"
-TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-FEATPARENT TEST-FEATPARENT-CHILD TEST-PARENTCHILD TEST-PARENTCHILD-CHILD TEST-PARENTLATEST TEST-PARENTLATEST-CHILD TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
 TEMP_PACKAGE_INDEXES=()
 
 restore_policy() {
@@ -97,6 +97,62 @@ EOF
     "$package_dir/gates" \
     "$artifacts_dir" \
     "$trace_dir/matrix.md"
+}
+
+copy_feat_parent_fixture() {
+  local dest_id="$1"
+  local package_dir="$ROOT/.ai/packages/$dest_id"
+  local artifacts_dir="$ROOT/artifacts/$dest_id"
+  local trace_dir="$ROOT/traceability/$dest_id"
+
+  mkdir -p "$package_dir"
+  cp "$ROOT/.ai/packages/FEAT-PARENT/package.yaml" "$package_dir/package.yaml"
+  cp "$ROOT/.ai/packages/FEAT-PARENT/classification.yaml" "$package_dir/classification.yaml"
+  cp -R "$ROOT/.ai/packages/FEAT-PARENT/gates" "$package_dir/"
+  cp -R "$ROOT/artifacts/FEAT-PARENT" "$artifacts_dir"
+  mkdir -p "$trace_dir"
+  cp "$ROOT/traceability/FEAT-PARENT/matrix.md" "$trace_dir/matrix.md"
+  cp "$ROOT/traceability/FEAT-PARENT/package-evidence-index.md" "$trace_dir/package-evidence-index.md"
+
+  replace_token_in_tree "FEAT-PARENT" "$dest_id" \
+    "$package_dir/package.yaml" \
+    "$package_dir/classification.yaml" \
+    "$package_dir/gates" \
+    "$artifacts_dir" \
+    "$trace_dir/matrix.md" \
+    "$trace_dir/package-evidence-index.md"
+}
+
+copy_feat_child_fixture() {
+  local dest_id="$1"
+  local package_dir="$ROOT/.ai/packages/$dest_id"
+  local artifacts_dir="$ROOT/artifacts/$dest_id"
+  local trace_dir="$ROOT/traceability/$dest_id"
+
+  mkdir -p "$package_dir"
+  cp "$ROOT/.ai/packages/FEAT-CHILD/package.yaml" "$package_dir/package.yaml"
+  cp "$ROOT/.ai/packages/FEAT-CHILD/classification.yaml" "$package_dir/classification.yaml"
+  cp -R "$ROOT/.ai/packages/FEAT-CHILD/gates" "$package_dir/"
+  cp -R "$ROOT/artifacts/FEAT-CHILD" "$artifacts_dir"
+  mkdir -p "$trace_dir"
+  cp "$ROOT/traceability/FEAT-CHILD/matrix.md" "$trace_dir/matrix.md"
+  cp "$ROOT/traceability/FEAT-CHILD/package-evidence-index.md" "$trace_dir/package-evidence-index.md"
+
+  replace_token_in_tree "FEAT-CHILD" "$dest_id" \
+    "$package_dir/package.yaml" \
+    "$package_dir/classification.yaml" \
+    "$package_dir/gates" \
+    "$artifacts_dir" \
+    "$trace_dir/matrix.md" \
+    "$trace_dir/package-evidence-index.md"
+}
+
+retarget_parent_child_references() {
+  local parent_id="$1" child_id="$2"
+  replace_token_in_tree "FEAT-CHILD" "$child_id" \
+    "$ROOT/.ai/packages/$parent_id/package.yaml" \
+    "$ROOT/.ai/packages/$parent_id/gates" \
+    "$ROOT/traceability/$parent_id/package-evidence-index.md"
 }
 
 cleanup_fixtures() {
@@ -429,11 +485,80 @@ fi
 copy_feat003_fixture TEST-BINDING
 ensure_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/implementation-1.md" "artifacts/TEST-BINDING/04-implementation/coding-log.md"
 ensure_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/release-1.md" "artifacts/TEST-BINDING/07-release-retro/retro.md"
-remove_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/code-review-1.md" "artifacts/TEST-BINDING/05-code-review/review-log.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-BINDING/gates/code-review-1.md" "artifacts/TEST-BINDING/05-code-review/review-log.md (v1)"
 if "$SCRIPT" TEST-BINDING 2>/dev/null; then
   echo "FAIL: TEST-BINDING should fail on incomplete gate bindings"; exit 1
 fi
 echo "PASS: gate artifact binding check works"
+
+# Test 6c: parent release evidence must reference child evidence and readiness
+copy_feat_parent_fixture TEST-FEATPARENT
+copy_feat_child_fixture TEST-FEATPARENT-CHILD
+retarget_parent_child_references TEST-FEATPARENT TEST-FEATPARENT-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEATPARENT/gates/implementation-1.md" "artifacts/TEST-FEATPARENT/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEATPARENT/gates/release-1.md" "artifacts/TEST-FEATPARENT/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEATPARENT/gates/release-1.md" "artifacts/TEST-FEATPARENT/07-release-retro/retro.md"
+output=$("$SCRIPT" TEST-FEATPARENT 2>&1) || { echo "FAIL: TEST-FEATPARENT should pass"; echo "$output"; exit 1; }
+
+copy_feat_parent_fixture TEST-PARENTCHILD
+copy_feat_child_fixture TEST-PARENTCHILD-CHILD
+retarget_parent_child_references TEST-PARENTCHILD TEST-PARENTCHILD-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD/gates/implementation-1.md" "artifacts/TEST-PARENTCHILD/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD/gates/release-1.md" "artifacts/TEST-PARENTCHILD/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTCHILD/gates/release-1.md" "artifacts/TEST-PARENTCHILD/07-release-retro/retro.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTCHILD/gates/release-1.md" "TEST-PARENTCHILD-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text()
+text = text.replace(f"  - .ai/packages/{child_id}/package.yaml\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/requirements-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/design-1.md\n", "", 1)
+text = text.replace(f"  - .ai/packages/{child_id}/gates/test-plan-1.md\n", "", 1)
+text = text.replace(f"  - traceability/{child_id}/package-evidence-index.md\n", "", 1)
+lines = []
+skip = False
+for line in text.splitlines(keepends=True):
+    if line.startswith("child_evidence:"):
+        skip = True
+        continue
+    if skip and not line.startswith("  "):
+        skip = False
+    if skip:
+        continue
+    lines.append(line)
+path.write_text("".join(lines))
+PY
+if "$SCRIPT" TEST-PARENTCHILD 2>/dev/null; then
+  echo "FAIL: TEST-PARENTCHILD should fail without child evidence references"; exit 1
+fi
+echo "PASS: parent-child release evidence check works"
+
+copy_feat_parent_fixture TEST-PARENTLATEST
+copy_feat_child_fixture TEST-PARENTLATEST-CHILD
+retarget_parent_child_references TEST-PARENTLATEST TEST-PARENTLATEST-CHILD
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST/gates/implementation-1.md" "artifacts/TEST-PARENTLATEST/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST/gates/release-1.md" "artifacts/TEST-PARENTLATEST/07-release-retro/known-issues.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-PARENTLATEST/gates/release-1.md" "artifacts/TEST-PARENTLATEST/07-release-retro/retro.md"
+python3 - <<'PY' "$ROOT/.ai/packages/TEST-PARENTLATEST/gates/release-1.md" "TEST-PARENTLATEST-CHILD"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+child_id = sys.argv[2]
+text = path.read_text().replace(
+    f"    latest_gate: .ai/packages/{child_id}/gates/test-plan-1.md\n",
+    f"    latest_gate: .ai/packages/{child_id}/gates/release-9.md\n",
+    1,
+)
+path.write_text(text)
+PY
+if "$SCRIPT" TEST-PARENTLATEST 2>/dev/null; then
+  echo "FAIL: TEST-PARENTLATEST should fail when latest_gate is not referenced in artifacts_checked"; exit 1
+fi
+echo "PASS: parent latest_gate consistency check works"
 
 # Test 7: failed gate result fails verification
 mkdir -p "$ROOT/.ai/packages/TEST-GATEFAIL/gates"

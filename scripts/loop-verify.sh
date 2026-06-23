@@ -82,6 +82,133 @@ phase_in_human_gates() {
   [[ "$line" == *"$phase"* ]]
 }
 
+package_child_ids() {
+  awk '
+    /^children:/ { in_children=1; next }
+    in_children && /^[^[:space:]-]/ { exit }
+    in_children && /^[[:space:]]*-/ {
+      if (child_id != "") {
+        print child_id
+      }
+      child_id=""
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      if (line ~ /^id:[[:space:]]*/) {
+        sub(/^id:[[:space:]]*/, "", line)
+        child_id=line
+      }
+      next
+    }
+    in_children && /^[[:space:]]+id:[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]+id:[[:space:]]*/, "", line)
+      child_id=line
+      next
+    }
+    END {
+      if (child_id != "") {
+        print child_id
+      }
+    }
+  ' "$PKG_DIR/package.yaml"
+}
+
+gate_has_binding_prefix() {
+  local gate="$1" prefix="$2"
+  awk -v prefix="$prefix" '
+    /^artifacts_checked:/ { in_section=1; next }
+    in_section && /^[a-z_]+:/ { exit }
+    in_section && /^  - / {
+      line=$0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      sub(/[[:space:]]+\([^)]*\)[[:space:]]*$/, "", line)
+      if (index(line, prefix) == 1) {
+        found=1
+        exit
+      }
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$gate"
+}
+
+child_evidence_block_has() {
+  local gate="$1" child_id="$2" pattern="$3"
+  awk -v child_id="$child_id" -v pattern="$pattern" '
+    /^child_evidence:/ { in_section=1; next }
+    in_section && /^[a-z_]+:/ { exit(found ? 0 : 1) }
+    in_section && $0 == "  - child: " child_id {
+      in_child=1
+      next
+    }
+    in_child && /^  - child: / { exit(found ? 0 : 1) }
+    in_child && /^[^[:space:]]/ { exit(found ? 0 : 1) }
+    in_child && $0 ~ pattern { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "$gate"
+}
+
+child_evidence_value() {
+  local gate="$1" child_id="$2" field="$3"
+  awk -v child_id="$child_id" -v field="$field" '
+    /^child_evidence:/ { in_section=1; next }
+    in_section && /^[a-z_]+:/ { exit }
+    in_section && $0 == "  - child: " child_id {
+      in_child=1
+      next
+    }
+    in_child && /^  - child: / { exit }
+    in_child && /^[^[:space:]]/ { exit }
+    in_child && $0 ~ "^    " field ": " {
+      line=$0
+      sub("^    " field ": ", "", line)
+      print line
+      exit
+    }
+  ' "$gate"
+}
+
+check_parent_child_release_evidence() {
+  local gate="$1"
+  local child_id has_children=0
+  local latest_gate_ref latest_gate_path
+
+  while IFS= read -r child_id; do
+    [[ -n "$child_id" ]] || continue
+    has_children=1
+    gate_has_section "$gate" "child_evidence" || \
+      err "gate child_evidence missing for release ($gate)"
+    gate_has_binding "$gate" ".ai/packages/$child_id/package.yaml" || \
+      err "release gate missing child package reference for $child_id ($gate)"
+    gate_has_binding "$gate" "traceability/$child_id/package-evidence-index.md" || \
+      err "release gate missing child evidence index reference for $child_id ($gate)"
+    gate_has_binding_prefix "$gate" ".ai/packages/$child_id/gates/" || \
+      err "release gate missing child readiness gate reference for $child_id ($gate)"
+    child_evidence_block_has "$gate" "$child_id" "^    status: " || \
+      err "release gate child_evidence missing status for $child_id ($gate)"
+    child_evidence_block_has "$gate" "$child_id" "^    package: \\.ai/packages/$child_id/package\\.yaml$" || \
+      err "release gate child_evidence missing package reference for $child_id ($gate)"
+    child_evidence_block_has "$gate" "$child_id" "^    latest_gate: \\.ai/packages/$child_id/gates/.+\\.md$" || \
+      err "release gate child_evidence missing latest_gate reference for $child_id ($gate)"
+    child_evidence_block_has "$gate" "$child_id" "^    evidence_index: traceability/$child_id/package-evidence-index\\.md$" || \
+      err "release gate child_evidence missing evidence index reference for $child_id ($gate)"
+    latest_gate_ref=$(child_evidence_value "$gate" "$child_id" "latest_gate")
+    if [[ -n "$latest_gate_ref" ]]; then
+      gate_has_binding "$gate" "$latest_gate_ref" || \
+        err "release gate latest_gate is not listed in artifacts_checked for $child_id ($gate)"
+      latest_gate_path="$ROOT/$latest_gate_ref"
+      [[ -f "$latest_gate_path" ]] || \
+        err "release gate latest_gate file missing for $child_id ($latest_gate_ref)"
+      if [[ -f "$latest_gate_path" ]]; then
+        grep -qE '^result: pass' "$latest_gate_path" || \
+          err "release gate latest_gate is not pass for $child_id ($latest_gate_ref)"
+      fi
+    fi
+  done < <(package_child_ids)
+
+  [[ $has_children -eq 0 ]] && return 0
+  return 0
+}
+
 latest_gate_file() {
   local phase="$1"
   local gates=() f
@@ -222,6 +349,9 @@ for phase in $ARCHIVED_PHASES; do
   fi
   grep -qE '^result: pass' "$gate" || err "latest gate for $phase is not pass ($gate)"
   check_gate_structure "$PROFILE" "$phase" "$PHASE_DIR" "$gate" "${required_files[@]}"
+  if [[ "$phase" == "release" ]]; then
+    check_parent_child_release_evidence "$gate"
+  fi
 done
 
 if [[ "$PKG_STATUS" == "ready_for_release" ]]; then
