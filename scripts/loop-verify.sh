@@ -22,6 +22,7 @@ TRACE_MATRIX="$ROOT/traceability/$PKG_ID/matrix.md"
 PROFILES="$ROOT/.ai/config/profiles.yaml"
 ERRORS=0
 WARNINGS=0
+REQUIRED_PACKAGE_FILES=()
 
 err() { echo "ERROR: $1"; ERRORS=$((ERRORS + 1)); }
 warn() { echo "WARN: $1"; WARNINGS=$((WARNINGS + 1)); }
@@ -122,6 +123,7 @@ gate_has_binding_prefix() {
       line=$0
       sub(/^[[:space:]]*-[[:space:]]*/, "", line)
       sub(/[[:space:]]+\([^)]*\)[[:space:]]*$/, "", line)
+      sub(/@v[0-9]+([.][0-9]+)*[[:space:]]*$/, "", line)
       if (index(line, prefix) == 1) {
         found=1
         exit
@@ -243,6 +245,7 @@ gate_has_binding() {
       line=$0
       sub(/^[[:space:]]*-[[:space:]]*/, "", line)
       sub(/[[:space:]]+\([^)]*\)[[:space:]]*$/, "", line)
+      sub(/@v[0-9]+([.][0-9]+)*[[:space:]]*$/, "", line)
       if (line == target) {
         found=1
         exit
@@ -255,7 +258,7 @@ gate_has_binding() {
 check_gate_structure() {
   local profile="$1" phase="$2" phase_dir="$3" gate="$4"
   shift 4
-  local dir required_file artifact_path
+  local dir required_file artifact_path package_file
 
   dir=$(basename "$phase_dir")
   grep -qE "^profile: ${profile}$" "$gate" || \
@@ -275,6 +278,12 @@ check_gate_structure() {
     artifact_path="artifacts/$PKG_ID/$dir/$required_file"
     gate_has_binding "$gate" "$artifact_path" || \
       err "gate artifacts_checked missing binding for $phase artifact $required_file ($gate)"
+  done
+
+  for package_file in "${REQUIRED_PACKAGE_FILES[@]-}"; do
+    artifact_path="traceability/$PKG_ID/$package_file"
+    gate_has_binding "$gate" "$artifact_path" || \
+      err "gate artifacts_checked missing package evidence binding for $phase artifact $package_file ($gate)"
   done
 }
 
@@ -312,6 +321,27 @@ if [[ $ERRORS -gt 0 ]]; then
 fi
 
 PKG_STATUS=$(grep -E '^status:' "$PKG_DIR/package.yaml" | awk '{print $2}')
+
+package_files_output=""
+required_package_count=0
+if ! package_files_output=$(contract_required_package_files "$EVIDENCE_POLICY_FILE"); then
+  err "$(contract_required_package_files_error "$EVIDENCE_POLICY_FILE")"
+else
+  while IFS= read -r package_file; do
+    [[ -n "$package_file" ]] || continue
+    REQUIRED_PACKAGE_FILES+=("$package_file")
+    required_package_count=$((required_package_count + 1))
+  done <<< "$package_files_output"
+
+  if [[ $required_package_count -eq 0 ]]; then
+    err "no required package evidence files configured"
+  fi
+fi
+
+if [[ $ERRORS -gt 0 ]]; then
+  echo "FAIL ($ERRORS errors, $WARNINGS warnings)"
+  exit 1
+fi
 
 ARCHIVED_PHASES=$(awk '
   /^  [a-z-]+:$/ { phase=$1; gsub(/:/,"",phase) }
@@ -362,27 +392,15 @@ if [[ "$PKG_STATUS" == "ready_for_release" ]]; then
   done < <(profile_phases "$PROFILE")
 fi
 
-package_files_output=""
-if ! package_files_output=$(contract_required_package_files "$EVIDENCE_POLICY_FILE"); then
-  err "$(contract_required_package_files_error "$EVIDENCE_POLICY_FILE")"
-else
-  required_package_count=0
-  while IFS= read -r package_file; do
-    [[ -n "$package_file" ]] || continue
-    required_package_count=$((required_package_count + 1))
-    if [[ ! -f "$ROOT/traceability/$PKG_ID/$package_file" ]]; then
-      if [[ "$ENFORCE" -eq 1 ]]; then
-        err "missing traceability/$PKG_ID/$package_file (enforce mode)"
-      else
-        warn "missing traceability/$PKG_ID/$package_file"
-      fi
+for package_file in "${REQUIRED_PACKAGE_FILES[@]-}"; do
+  if [[ ! -f "$ROOT/traceability/$PKG_ID/$package_file" ]]; then
+    if [[ "$ENFORCE" -eq 1 ]]; then
+      err "missing traceability/$PKG_ID/$package_file (enforce mode)"
+    else
+      warn "missing traceability/$PKG_ID/$package_file"
     fi
-  done <<< "$package_files_output"
-
-  if [[ $required_package_count -eq 0 ]]; then
-    err "no required package evidence files configured"
   fi
-fi
+done
 
 if [[ $ERRORS -gt 0 ]]; then
   echo "FAIL ($ERRORS errors, $WARNINGS warnings)"

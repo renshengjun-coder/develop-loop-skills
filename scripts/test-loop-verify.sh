@@ -6,7 +6,7 @@ SCRIPT="$ROOT/scripts/loop-verify.sh"
 EVIDENCE_POLICY="$ROOT/.ai/contracts/evidence-policy.yaml"
 EVIDENCE_POLICY_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.testbak"
 EVIDENCE_POLICY_MALFORMED_BAK="$ROOT/.ai/contracts/evidence-policy.yaml.malformedbak"
-TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-FEATPARENT TEST-FEATPARENT-CHILD TEST-PARENTCHILD TEST-PARENTCHILD-CHILD TEST-PARENTLATEST TEST-PARENTLATEST-CHILD TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
+TEST_PACKAGES=(TEST-BAD TEST-NOMATRIX TEST-NOINDEX TEST-FEAT003 TEST-FEAT003-ATV TEST-FEAT003-PKGBIND TEST-FEATPARENT TEST-FEATPARENT-CHILD TEST-PARENTCHILD TEST-PARENTCHILD-CHILD TEST-PARENTLATEST TEST-PARENTLATEST-CHILD TEST-GATEFAIL TEST-INCOMPLETE TEST-BINDING)
 TEMP_PACKAGE_INDEXES=()
 
 restore_policy() {
@@ -175,8 +175,8 @@ trap cleanup_fixtures EXIT
   exit 1
 }
 mv "$EVIDENCE_POLICY" "$EVIDENCE_POLICY_BAK"
-if output=$("$SCRIPT" FEAT-001 2>&1); then
-  echo "FAIL: FEAT-001 verifier should fail when .ai/contracts/evidence-policy.yaml is missing"
+if output=$("$SCRIPT" FEAT-003 2>&1); then
+  echo "FAIL: FEAT-003 verifier should fail when .ai/contracts/evidence-policy.yaml is missing"
   exit 1
 fi
 echo "$output" | grep -q "missing configured evidence policy" || {
@@ -185,8 +185,8 @@ echo "$output" | grep -q "missing configured evidence policy" || {
   exit 1
 }
 restore_policy
-output=$("$SCRIPT" FEAT-001 2>&1) || {
-  echo "FAIL: FEAT-001 should pass once evidence policy is restored"
+output=$("$SCRIPT" FEAT-003 2>&1) || {
+  echo "FAIL: FEAT-003 should pass once evidence policy is restored"
   echo "$output"
   exit 1
 }
@@ -322,8 +322,8 @@ profiles:
 human_readable_evidence:
   required_package_files:
 EOF
-if output=$("$SCRIPT" FEAT-001 2>&1); then
-  echo "FAIL: FEAT-001 should fail when required_package_files is malformed"
+if output=$("$SCRIPT" FEAT-003 2>&1); then
+  echo "FAIL: FEAT-003 should fail when required_package_files is malformed"
   exit 1
 fi
 echo "$output" | grep -q "invalid human_readable_evidence.required_package_files" || {
@@ -332,15 +332,15 @@ echo "$output" | grep -q "invalid human_readable_evidence.required_package_files
   exit 1
 }
 restore_policy
-output=$("$SCRIPT" FEAT-001 2>&1) || {
-  echo "FAIL: FEAT-001 should pass once malformed policy is restored"
+output=$("$SCRIPT" FEAT-003 2>&1) || {
+  echo "FAIL: FEAT-003 should pass once malformed policy is restored"
   echo "$output"
   exit 1
 }
 echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS after restoring malformed policy"; exit 1; }
 
-# Test 1: FEAT-001 demo package passes
-output=$("$SCRIPT" FEAT-001 2>&1) || { echo "FAIL: FEAT-001 should pass"; echo "$output"; exit 1; }
+# Test 1: FEAT-003 demo package passes
+output=$("$SCRIPT" FEAT-003 2>&1) || { echo "FAIL: FEAT-003 should pass"; echo "$output"; exit 1; }
 echo "$output" | grep -q "PASS" || { echo "FAIL: expected PASS"; exit 1; }
 
 # Test 2: missing package fails
@@ -368,8 +368,8 @@ if "$SCRIPT" TEST-BAD 2>/dev/null; then
 fi
 echo "PASS: TEST-BAD correctly failed"
 
-# Test 4: FEAT-001 still passes (regression)
-output=$("$SCRIPT" FEAT-001 2>&1) || { echo "FAIL: FEAT-001 regression"; exit 1; }
+# Test 4: FEAT-003 still passes (regression)
+output=$("$SCRIPT" FEAT-003 2>&1) || { echo "FAIL: FEAT-003 regression"; exit 1; }
 
 # Test 5: --enforce turns matrix warning into failure
 mkdir -p "$ROOT/.ai/packages/TEST-NOMATRIX/gates"
@@ -402,6 +402,8 @@ artifacts_checked:
   - artifacts/TEST-NOMATRIX/01-requirements/user-stories.md (v1)
   - artifacts/TEST-NOMATRIX/01-requirements/acceptance-criteria.md (v1)
   - artifacts/TEST-NOMATRIX/01-requirements/review-log.md
+  - traceability/TEST-NOMATRIX/matrix.md
+  - traceability/TEST-NOMATRIX/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
@@ -449,6 +451,8 @@ artifacts_checked:
   - artifacts/TEST-NOINDEX/01-requirements/user-stories.md (v1)
   - artifacts/TEST-NOINDEX/01-requirements/acceptance-criteria.md (v1)
   - artifacts/TEST-NOINDEX/01-requirements/review-log.md
+  - traceability/TEST-NOINDEX/matrix.md
+  - traceability/TEST-NOINDEX/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
@@ -480,6 +484,30 @@ if [[ -d "$ROOT/.ai/packages/FEAT-003" ]]; then
   output=$("$SCRIPT" TEST-FEAT003 2>&1) || { echo "FAIL: TEST-FEAT003 should pass"; echo "$output"; exit 1; }
   output=$("$SCRIPT" --enforce TEST-FEAT003 2>&1) || { echo "FAIL: TEST-FEAT003 enforce should pass"; echo "$output"; exit 1; }
 fi
+
+# Test 6a: gate bindings accept @v1 artifact suffixes
+copy_feat003_fixture TEST-FEAT003-ATV
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-ATV/gates/implementation-1.md" "artifacts/TEST-FEAT003-ATV/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-ATV/gates/release-1.md" "artifacts/TEST-FEAT003-ATV/07-release-retro/retro.md"
+replace_token_in_tree " (v1)" "@v1" "$ROOT/.ai/packages/TEST-FEAT003-ATV/gates"
+output=$("$SCRIPT" TEST-FEAT003-ATV 2>&1) || {
+  echo "FAIL: TEST-FEAT003-ATV should pass with @v1 gate bindings"
+  echo "$output"
+  exit 1
+}
+echo "PASS: @v1 gate binding syntax works"
+
+# Test 6aa: baseline verifier requires package evidence bindings in gate artifacts_checked
+copy_feat003_fixture TEST-FEAT003-PKGBIND
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND/gates/implementation-1.md" "artifacts/TEST-FEAT003-PKGBIND/04-implementation/coding-log.md"
+ensure_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND/gates/release-1.md" "artifacts/TEST-FEAT003-PKGBIND/07-release-retro/retro.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND/gates/requirements-1.md" "traceability/TEST-FEAT003-PKGBIND/matrix.md"
+remove_gate_binding "$ROOT/.ai/packages/TEST-FEAT003-PKGBIND/gates/requirements-1.md" "traceability/TEST-FEAT003-PKGBIND/package-evidence-index.md"
+if "$SCRIPT" TEST-FEAT003-PKGBIND 2>/dev/null; then
+  echo "FAIL: TEST-FEAT003-PKGBIND should fail without package evidence gate bindings"
+  exit 1
+fi
+echo "PASS: package evidence gate binding check works"
 
 # Test 6b: incomplete gate artifact bindings fail verification
 copy_feat003_fixture TEST-BINDING

@@ -9,6 +9,8 @@ artifacts_checked:
   - artifacts/FEAT-PARENT/01-requirements/user-stories.md (v1)
   - artifacts/FEAT-PARENT/01-requirements/acceptance-criteria.md (v1)
   - artifacts/FEAT-PARENT/01-requirements/review-log.md
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures

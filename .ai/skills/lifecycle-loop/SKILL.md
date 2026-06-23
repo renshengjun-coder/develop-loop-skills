@@ -155,6 +155,7 @@ next: <next-phase-name | same-phase-for-reentry>
 
 Never set `result: pass` with unchecked checklist items or open blocking findings.
 Treat `artifacts_checked` as the package-level audit binding for the gate: list the exact evidence set a reviewer would need to reconstruct the decision, and do not mix current and stale evidence snapshots in one gate record.
+Use `path/to/file.md@v1` for new artifact-version bindings. The verifier still accepts the older `path/to/file.md (v1)` form for compatibility, but new or refreshed gates should use `@v1`.
 
 ## Loop vs Pipeline
 

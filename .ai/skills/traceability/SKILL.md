@@ -69,7 +69,7 @@ traces:
 **Source files:** Add HTML comment at top of changed files when practical:
 `<!-- implements: AC-001 design: architecture.md §2 -->`
 
-**Gate binding:** Lifecycle loop gate files must list the same paths in `artifacts_checked` so L2 decisions bind to exact files.
+**Gate binding:** Lifecycle loop gate files must list the same paths in `artifacts_checked` so L2 decisions bind to exact files, including the current `traceability/<package_id>/matrix.md` and `traceability/<package_id>/package-evidence-index.md` package evidence paths for every gate.
 
 **Package evidence index:** Keep `traceability/<package_id>/package-evidence-index.md` aligned with the latest archived phase artifacts and latest gate attempt per phase. It is the top-level human-readable audit entry point; it must point to the same evidence set the gate files bind.
 

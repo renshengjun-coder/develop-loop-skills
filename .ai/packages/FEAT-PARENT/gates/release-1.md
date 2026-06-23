@@ -9,6 +9,8 @@ artifacts_checked:
   - artifacts/FEAT-PARENT/07-release-retro/known-issues.md (v1)
   - artifacts/FEAT-PARENT/07-release-retro/retro.md (v1)
   - artifacts/FEAT-PARENT/07-release-retro/review-log.md (v1)
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
   - .ai/packages/FEAT-CHILD/package.yaml
   - .ai/packages/FEAT-CHILD/gates/requirements-1.md
   - .ai/packages/FEAT-CHILD/gates/design-1.md

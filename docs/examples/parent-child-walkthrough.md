@@ -61,10 +61,12 @@ Lifecycle-loop checks **child readiness** before parent release gate passes:
 
 For human audit, `traceability/FEAT-PARENT/package-evidence-index.md` is the parent release evidence entry point. It binds child readiness by reference to the child package, child gates, and the child package evidence index rather than copying child artifacts into the parent package.
 
-For parent-child packages, `scripts/loop-verify.sh` already checks the release gate's child evidence binding shape in baseline mode. `--enforce` keeps those checks and additionally treats missing required package evidence files as errors.
+For parent-child packages, `scripts/loop-verify.sh` already checks the release gate's child evidence binding shape in baseline mode. Baseline mode also requires each gate's `artifacts_checked` list to bind the package evidence files (`traceability/<id>/matrix.md` and `traceability/<id>/package-evidence-index.md`) alongside the phase artifacts. `--enforce` keeps those checks and additionally treats missing required package evidence files as errors.
 
 ```text
 artifacts_checked:
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
   - .ai/packages/FEAT-CHILD/package.yaml
   - .ai/packages/FEAT-CHILD/gates/requirements-1.md
   - .ai/packages/FEAT-CHILD/gates/design-1.md
