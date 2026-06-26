@@ -10,6 +10,8 @@ description: >-
 
 Fully owns the **code-review phase**. Runnable standalone or when invoked by lifecycle-loop.
 
+Act as an **independent reviewer**: judge only from the archived artifacts and the actual repository state, not from any implementation-phase conversation or memory. Re-read all evidence from disk. When run inside a loop that also produced the implementation, treat prior reasoning as untrusted and prefer dispatching review to a separate agent/context so findings are evidence-grounded rather than inheriting implementation assumptions.
+
 ## Required inputs
 
 - `package_id`
@@ -75,13 +77,25 @@ Classify as **blocking** any issue that violates an AC or archived design, creat
 
 `blocking-issues.md` is an auditable ledger with append-only transition history. Record `blocking_count: <unresolved count>` and retain every blocker after resolution. Each blocker must include:
 
-- Stable ID and current `status: open | resolved`, derived from its latest transition
+- Stable ID and current `status: open | resolved | rejected`, derived from its latest transition
 - `source`: originating lens artifact and finding ID
 - Evidence, impact, and required action
 - `earliest_affected_phase`: `requirements`, `design`, `test-plan`, `implementation`, or `code-review`
-- Timestamped transitions such as `opened`, `routed`, `phase_rearchived`, `review_corrected`, `review_rerun`, and `resolved`, each with actor/source and evidence
+- Timestamped transitions such as `opened`, `disputed`, `rejected`, `routed`, `phase_rearchived`, `review_corrected`, `review_rerun`, and `resolved`, each with actor/source and evidence
 
-Never edit or delete an existing transition; append a new transition and derive current status from the latest event. Recalculate `blocking_count` from blockers whose latest transition is not `resolved`.
+Never edit or delete an existing transition; append a new transition and derive current status from the latest event. Recalculate `blocking_count` from blockers whose latest transition is not `resolved` or `rejected`.
+
+### Disputed findings (false positives)
+
+A finding is a reviewer claim to verify, not an automatic order to repair. Before routing a blocker to any phase, confirm it is real against the actual repository evidence. If a finding is incorrect for this codebase — contradicted by repository evidence, based on a misread of scope, an already-satisfied AC/design constraint, or a YAGNI/unused path — do **not** route it or rerun downstream phases.
+
+Instead:
+
+1. Append a `disputed` transition with the concrete technical rationale and the repository evidence (`file:line`, test, or design reference) that refutes the finding.
+2. Append a `rejected` transition; derive `status: rejected`. A rejected blocker does not count toward `blocking_count` and never triggers upstream stale handling or rerun.
+3. Keep the full transition history for audit. If later evidence shows the finding was valid after all, append a new `opened` transition to reopen it and proceed with normal routing.
+
+Only dispute on technical grounds with cited evidence; never reject a finding to avoid rework. A finding that is valid but low-impact stays a non-blocking suggestion, not a rejection.
 
 Route each blocker to the earliest affected phase in the active profile:
 
@@ -115,12 +129,13 @@ Write `artifacts/<package_id>/05-code-review/review-log.md`:
 | Repository comparison | pass/fail | Coherent local or PR scope recorded; exact baseline, target, range, and included path classes reconciled |
 | Changed-path coverage | pass/fail | Every path in changed-files.md and repository comparison has an evidence-backed disposition or justified exclusion |
 | Blocking vs non-blocking | pass/fail | Ledger retains timestamped transitions, routes earliest affected phase, and count equals open blockers |
+| Disputed findings justified | pass/fail | Every `rejected` finding cites repository evidence refuting it; none rejected to avoid rework |
 | AC coverage | pass/fail | Every AC has an implementation-conformance result |
 | Design-decision conformance | pass/fail | Every applicable archived decision/contract/constraint is inventoried |
 | Security lens | pass/fail | Substantive for high_risk; concrete N/A rationale only when allowed |
 | Testability | pass/fail | Test gaps include suggested test names |
 
-Record `**Blocking failures:** <count>` and `**Recommendation:** <action>`. The count must equal unresolved entries in `blocking-issues.md`. A failed self-review check must create or update a blocker and enter Step 3. Self-review failures and open blockers block Step 4 and archive, but they do not block Step 3 resolution work.
+Record `**Blocking failures:** <count>` and `**Recommendation:** <action>`. The count must equal entries in `blocking-issues.md` whose latest transition is not `resolved` or `rejected`. A failed self-review check must create or update a blocker and enter Step 3. Self-review failures and open blockers block Step 4 and archive, but they do not block Step 3 resolution work.
 
 ## Step 3: Resolve Blocking Issues
 

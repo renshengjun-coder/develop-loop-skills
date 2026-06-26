@@ -38,11 +38,16 @@ pack/
     traceability/
   templates/              # copied into target projects by devloop init
     .ai/config/profiles.yaml
-    .ai/packages/_template/
+    .ai/packages/_template/package.yaml
+    .ai/packages/_template/classification.yaml
     scripts/loop-verify.sh
+    scripts/test-loop-verify.sh
+    artifacts/.gitkeep
+    traceability/.gitkeep
     AGENTS.md
     .cursor/rules/devloop.mdc
-    .github/workflows/loop-verify.yml  (optional via --with-ci)
+    .devloop-version
+    .github/workflows/loop-verify.yml  (added to projects only via init --with-ci)
 ```
 
 Source of truth for skills remains `.ai/skills/` in this repo. `build-pack.sh` copies them into `pack/skills/` for distribution.
@@ -60,6 +65,15 @@ Or run all via npm:
 ```bash
 npm test
 ```
+
+### CI
+
+Two GitHub Actions workflows guard this repo:
+
+| Workflow | Trigger | What it runs |
+|----------|---------|--------------|
+| `.github/workflows/build-pack.yml` | PRs/pushes touching `.ai/`, `bin/`, `templates/`, `VERSION`, or build scripts | `test-build-pack.sh` + `test-devloop-cli.sh` (pack layout + CLI install/init/doctor) |
+| `.github/workflows/loop-verify.yml` | Pull requests | `loop-verify` in **enforce mode** (L3 contract checks) |
 
 ### Release checklist
 
