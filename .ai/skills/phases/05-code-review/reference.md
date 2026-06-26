@@ -105,9 +105,11 @@ blocking_count: 0
 | 2026-06-12T10:35:00Z | resolved | `security-review.md#SEC-001` | Allowlist evidence and tests verified |
 ```
 
-Retain resolved entries and every transition. `blocking_count` is the number of blockers whose latest transition is not `resolved`.
+Retain resolved entries and every transition. `blocking_count` is the number of blockers whose latest transition is not `resolved` or `rejected`.
 
 For a review-local blocker, use `earliest_affected_phase: code-review` and append `review_corrected`, `review_rerun`, and `resolved` transitions. Correct only review artifacts/evidence, preserve upstream archives, and rerun all five lenses plus all seven review artifacts.
+
+For a finding that is a false positive, append `disputed` (with refuting `file:line`/test/design evidence) then `rejected`; derive `status: rejected`. A rejected finding does not count toward `blocking_count` and never triggers stale handling or downstream rerun. Reopen with a new `opened` transition only if later evidence shows it was valid.
 
 ```markdown
 # Non-Blocking Suggestions

@@ -19,6 +19,18 @@ Fully owns the **requirements phase** for a change package. Runnable standalone 
 
 If `package.yaml` does not exist and user did not run `/devloop start`, create artifact folder only or ask user to run `/devloop start <id>` first.
 
+## Step 0: Clarify
+
+Resolve ambiguity **before** writing the PRD. Do not generate artifacts from unexamined assumptions, even when the request looks simple.
+
+1. Explore context first: read `package.yaml`, any existing `artifacts/<package_id>/`, and relevant repo files or recent commits.
+2. **Oversized check:** if the request spans multiple independent subsystems, stop and propose decomposition into separate packages (use the parent-child package model) before refining details. Do not spend clarification on a package that should be split.
+3. Ask clarifying questions **one at a time**, multiple-choice when possible, focused on purpose, constraints, and success criteria. Wait for each answer before the next question.
+4. For non-trivial scope, present **1-2 scope options** (e.g. MVP vs full) with trade-offs and a recommendation; let the user pick before generation.
+5. Capture every unresolved item in `open-questions.md` as you go. Anything you must assume to proceed is recorded as an explicit assumption in `PRD.md`, never as a silent default.
+
+Skip individual questions only when the answer is already unambiguous from context; never skip the step wholesale.
+
 ## Step 1: Generate
 
 Create or revise files under `artifacts/<package_id>/01-requirements/`:
@@ -59,10 +71,12 @@ Write `artifacts/<package_id>/01-requirements/review-log.md`:
 |-------|--------|------|
 | Clear user value | pass/fail | Problem names user and pain |
 | Testable AC | pass/fail | Every AC has measurable outcome |
-| No ambiguity | pass/fail | No vague terms without definition |
+| No ambiguity | pass/fail | No vague terms without definition; no requirement readable two ways |
 | Boundaries defined | pass/fail | out-of-scope.md non-empty |
 | Acceptance criteria exist | pass/fail | ≥ 1 AC per user story |
 | Risks identified | pass/fail | ≥ 1 risk with mitigation |
+| Open questions closed | pass/fail | Every open question is resolved, converted to an explicit assumption, or waived |
+| Goals justified (YAGNI) | pass/fail | Each goal maps to real user value; speculative scope removed |
 
 **Blocking failures:** <count>
 **Recommendation:** <action if blocking > 0>
@@ -83,23 +97,25 @@ If not in `human_gates`: set `status: reviewed` on artifacts.
 
 ## Step 4: Archive
 
-1. Bump `version` in frontmatter if this is a revision (v1 → v2).
-2. Update `.ai/packages/<package_id>/package.yaml`:
+1. **Close open questions:** every entry in `open-questions.md` must be resolved, converted to an explicit assumption in `PRD.md`, or recorded as a waiver. Do not archive with unresolved blocking questions.
+2. Bump `version` in frontmatter if this is a revision (v1 → v2).
+3. Update `.ai/packages/<package_id>/package.yaml`:
    ```yaml
    phases:
      requirements:
        status: archived
        artifact_version: v1
    ```
-3. Load `.ai/skills/traceability/SKILL.md` and seed matrix rows from AC IDs.
-4. **Do not** write gate PASS — lifecycle-loop owns L2.
+4. Load `.ai/skills/traceability/SKILL.md` and seed matrix rows from AC IDs.
+5. **Do not** write gate PASS — lifecycle-loop owns L2.
 
 ## Quality criteria
 
 - PRD is review-ready, not a bullet outline
 - Every user story has ≥ 1 testable acceptance criterion
 - Out-of-scope is explicit (reduces scope creep)
-- Open questions are honest (not hidden assumptions)
+- Open questions are honest (not hidden assumptions) and closed before archive — resolved, converted to explicit assumptions, or waived
+- Clarification happened before generation; oversized requests were decomposed, not silently scoped
 
 ## Anti-patterns
 
