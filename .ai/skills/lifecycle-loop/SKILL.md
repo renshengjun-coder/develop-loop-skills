@@ -18,13 +18,32 @@ User-facing slash command is **`/devloop`** (not `/loop`) to avoid colliding wit
 | Command | Behavior |
 |---------|----------|
 | `/devloop start <id>` | Create package from `_template`, classify, select profile, show execution plan |
-| `/devloop run <id>` | Full E2E in **loop** mode (default); auto re-entry on gate fail |
+| `/devloop run <id>` | Full E2E in **loop** mode (default); pauses at human-gate checkpoints and auto re-entry on gate fail |
 | `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
+| `/devloop continue <id>` | Resume from a checkpoint or other stop state using the persisted `run_control` block |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase only; reject if `<phase>` is not in `active_profile` phases unless user explicitly overrides |
-| `/devloop status <id>` | Summarize `package.yaml`, gates, blockers, phase readiness |
+| `/devloop status <id>` | Summarize `package.yaml`, gates, blockers, phase readiness, and `run_control` |
 | `/devloop classify <id>` | Re-run or confirm classification; update `classification.yaml` |
 
 **Mode:** Read from command flag or `package.yaml` field `mode: loop | pipeline`. Switching mode mid-run requires explicit user command.
+
+## Run Control State
+
+Persist checkpoint and resume state in `.ai/packages/<id>/package.yaml` under `run_control`:
+
+```yaml
+run_control:
+  state: running | paused | stopped | done
+  stopped_at: <phase> | null
+  reason: human_gate_checkpoint | gate_fail | escalation | error | interrupted | null
+  since: "2026-06-26T09:00:00Z" | null
+  next_action: "/devloop continue FEAT-003" | null
+  history:
+    - { at: "2026-06-26T09:00:00Z", event: paused, phase: requirements, reason: human_gate_checkpoint }
+    - { at: "2026-06-26T09:30:00Z", event: continued, phase: requirements, by: user }
+```
+
+Back-compat: if `run_control` is absent, treat the package as `state: running` and infer resume from `phases.<name>.status` plus gate files.
 
 ## Classify Steps
 
@@ -64,35 +83,60 @@ Record overrides as: `override: { by: "<name>", reason: "<text>", new_tier: stan
 
 You are driving the SDLC loop for one package. Follow these steps in order. **Re-read package state from disk after each phase completes** — do not rely on conversation memory.
 
-### Before each phase
+### `/devloop run <id>`
 
 1. Read `.ai/packages/<id>/package.yaml` and list gate files in `.ai/packages/<id>/gates/`.
-2. Load `active_profile` from `classification.yaml` and read `.ai/config/profiles.yaml` for `phases`, `human_gates`, `max_reentry`, and the configured evidence policy path.
-3. If this phase is `archived` and its latest gate is `pass`, skip to the next phase.
-4. If an upstream `artifact_version` changed since the last gate for this phase, mark downstream phases `pending` in `package.yaml`, treat affected gates as `stale`, and return to the earliest affected phase.
-5. Load `phases` list for `active_profile` from `profiles.yaml`. **Skip** phases not in the profile (e.g. `routine` skips `design` and `test-plan`). Do not gate skipped phases.
+2. If `run_control.state` is `paused` or `stopped`, report `stopped_at`, `reason`, and `next_action`, then stop. Do **not** advance; require `/devloop continue <id>`.
+3. Set or refresh `run_control.state: running`, clear stale `next_action`, and continue with phase driving.
+4. After a phase listed in the active profile's `human_gates` passes its gate, write:
 
-### Run the phase
+```yaml
+run_control:
+  state: paused
+  stopped_at: <phase>
+  reason: human_gate_checkpoint
+  since: "<current-utc-timestamp>"
+  next_action: "/devloop continue <id>"
+```
 
-1. Tell the user which phase is starting.
-2. Load and follow the matching phase skill (see path map below) with this `package_id`.
-3. Wait until the phase skill finishes Archive: artifacts written, `review-log.md` present, `package.yaml` shows this phase as `archived`.
+5. Append a `paused` history entry, report the checkpoint, and stop.
+6. If a run stops without reaching a human checkpoint or `done`, persist a stop block before returning control to the user:
 
-### Gate the phase
+```yaml
+run_control:
+  state: stopped
+  stopped_at: <phase>
+  reason: gate_fail | escalation | error | interrupted
+  since: "<current-utc-timestamp>"
+  next_action: "/devloop continue <id>"
+```
 
-1. Follow **Gate Steps** below for this phase name.
-2. Write `.ai/packages/<id>/gates/<phase>-<n>.md` (increment attempt number `n`).
-3. If `result: pass` → continue to next phase in plan.
-4. If `result: fail`:
-   - **pipeline** mode: stop and report findings; do not re-invoke phase skill.
-   - **loop** mode: if re-entry count for this phase is below `max_reentry`, invoke the same phase skill with gate findings as revision input, then gate again.
-   - If re-entry budget exhausted → follow **Escalation Steps** and stop.
+7. Use the existing reason enum exactly:
+   - `gate_fail` when pipeline mode stops on the first failed gate, or when loop mode stops because the failed gate must be revisited manually before any re-entry can proceed
+   - `escalation` when `max_reentry` is exhausted, repeated blocking findings force escalation, or a waiver/manual decision is required
+   - `error` when the phase skill or orchestration fails before a gate decision can complete
+   - `interrupted` when the run is intentionally aborted before the current phase completes
+8. Append a matching `stopped` history entry whenever one of those stop reasons is written, report `stopped_at`, `reason`, `since`, and `next_action`, then stop.
+9. If all active profile phases pass, set `run_control.state: done`, clear `stopped_at` / `reason` / `next_action`, append a `done` history entry, and set package `status` to `ready_for_merge` or `ready_for_release` as today.
 
-### After all profile phases pass
+### `/devloop continue <id>`
 
-1. If profile includes `release` and release gate passes → set `package.yaml` `status: ready_for_release`
-2. Else if all profile phases pass → set `package.yaml` `status: ready_for_merge`
-3. Summarize: phases completed, gate history, human approvals, open blockers.
+1. Re-read `.ai/packages/<id>/package.yaml`, `classification.yaml`, and gate files.
+2. Resolve the resume point from `run_control.reason`:
+   - `human_gate_checkpoint` → start with the next phase after `stopped_at`
+   - `gate_fail` or `escalation` → re-enter the failed phase
+   - `error` or `interrupted` → re-run the earliest non-archived phase from its start
+3. Set `run_control.state: running`, append a `continued` history entry, and drive forward until the next checkpoint, stop, or `done`.
+4. If `run_control.state` is already `done`, report completion and do nothing.
+
+### `/devloop status <id>`
+
+Always include:
+- `run_control.state`
+- `run_control.stopped_at`
+- `run_control.reason`
+- `run_control.since`
+- `run_control.next_action`
 
 ### Phase skill path map
 
@@ -204,13 +248,13 @@ children:
 
 1. Read each `children[].id` → load `.ai/packages/<child_id>/package.yaml`.
 2. Load each child's `profile` from `package.yaml` (or `classification.yaml` if package profile is unset).
-3. For the light parent-child release check currently implemented, require release-gate references that point to each child's package state and latest cited child gate evidence.
+3. For the light parent-child release check currently implemented, require release-gate references that point to each child's package state and singular latest child gate evidence.
 4. If any required child reference is missing or inconsistent → parent `release` gate `result: fail` with a finding listing the child id and missing evidence.
 5. Parent `release` gate `artifacts_checked` includes child package paths:
    - `.ai/packages/<child_id>/package.yaml`
    - `traceability/<child_id>/package-evidence-index.md`
-   - `.ai/packages/<child_id>/gates/<latest-pass-per-phase>`
-6. Parent `release` gate includes a readable `child_evidence:` block that names each child's status, package manifest, latest gate reference, and package evidence index so the package-level audit trail stays human-readable as well as machine-checkable.
+   - `.ai/packages/<child_id>/gates/<latest-pass-gate>`
+6. Parent `release` gate includes a readable `child_evidence:` block that names each child's `status`, `package`, `latest_gate`, and `evidence_index` so the package-level audit trail stays human-readable as well as machine-checkable.
 
 ### Constraints
 
