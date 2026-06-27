@@ -4,6 +4,13 @@ owner: ""
 profile: standard
 mode: loop
 status: in_progress
+run_control:
+  state: running
+  stopped_at: null
+  reason: null
+  since: null
+  next_action: null
+  history: []
 phases:
   requirements:
     status: pending

@@ -64,14 +64,7 @@ devloop_cmd_init() {
   fi
 
   devloop_copy_tree_file "$tpl/.devloop-version" "$proj/.devloop-version" "$mode"
-
-  if [[ ! -f "$proj/.cursor/rules/devloop.mdc" ]]; then
-    mkdir -p "$proj/.cursor/rules"
-    cp "$tpl/.cursor/rules/devloop.mdc" "$proj/.cursor/rules/devloop.mdc"
-    echo "created $proj/.cursor/rules/devloop.mdc"
-  else
-    echo "skip  $proj/.cursor/rules/devloop.mdc"
-  fi
+  devloop_copy_tree_file "$tpl/.cursor/rules/devloop.mdc" "$proj/.cursor/rules/devloop.mdc" "$mode"
 
   if [[ "$with_ci" -eq 1 ]]; then
     devloop_copy_tree_file "$tpl/.github/workflows/loop-verify.yml" "$proj/.github/workflows/loop-verify.yml" "$mode"

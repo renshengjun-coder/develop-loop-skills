@@ -9,10 +9,11 @@ Orchestrator slash command: **`/devloop`**
 | Command | Description |
 |---------|-------------|
 | `/devloop start <id>` | Create package, classify, select profile |
-| `/devloop run <id>` | E2E orchestration (loop mode) |
+| `/devloop run <id>` | E2E orchestration (loop mode; pauses at human checkpoints) |
+| `/devloop continue <id>` | Resume from a checkpoint or other stop state |
 | `/devloop run <id> --pipeline` | Single pass per phase |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase |
-| `/devloop status <id>` | Package status and blockers |
+| `/devloop status <id>` | Package status, blockers, and run-control state |
 | `/devloop classify <id>` | Re-run complexity classification |
 
 Phase skills (requirements, design, test-plan, implementation, code-review, test-report, release-retro, traceability) are invokable standalone.

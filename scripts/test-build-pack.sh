@@ -16,4 +16,15 @@ for skill in lifecycle-loop 01-requirement traceability; do
   [[ -f "$PACK/skills/$skill/SKILL.md" ]] || { echo "FAIL: missing $skill/SKILL.md"; exit 1; }
 done
 
+grep -q "/devloop continue <id>" "$PACK/skills/lifecycle-loop/SKILL.md" \
+  || { echo "FAIL: lifecycle-loop skill missing continue command"; exit 1; }
+grep -q "^run_control:" "$PACK/templates/.ai/packages/_template/package.yaml" \
+  || { echo "FAIL: package template missing run_control"; exit 1; }
+grep -q "^  state: running" "$PACK/templates/.ai/packages/_template/package.yaml" \
+  || { echo "FAIL: package template missing default running state"; exit 1; }
+grep -q "/devloop continue <id>" "$PACK/templates/AGENTS.md" \
+  || { echo "FAIL: AGENTS template missing continue command"; exit 1; }
+grep -Fq "/devloop start|run|continue|gate|status|classify" "$PACK/templates/.cursor/rules/devloop.mdc" \
+  || { echo "FAIL: Cursor rule missing continue command"; exit 1; }
+
 echo "PASS: build-pack layout OK"

@@ -3,12 +3,32 @@
 ## Command cheat sheet
 
 ```text
-/devloop start FEAT-003          # create package + classify
-/devloop run FEAT-003            # E2E loop mode
-/devloop run FEAT-003 --pipeline # single pass
-/devloop gate FEAT-003 design    # gate one phase
-/devloop status FEAT-003         # status summary
-/devloop classify FEAT-003       # re-classify
+/devloop start FEAT-003             # create package + classify
+/devloop run FEAT-003               # start loop; pauses at human checkpoints
+/devloop continue FEAT-003          # resume from checkpoint or stop
+/devloop run FEAT-003 --pipeline    # single pass
+/devloop gate FEAT-003 design       # gate one phase
+/devloop status FEAT-003            # status + run_control summary
+/devloop classify FEAT-003          # re-classify
+```
+
+## Checkpoint example
+
+```text
+/devloop run FEAT-003
+→ requirements archived
+→ requirements gate passed
+→ paused at human gate checkpoint
+→ next: /devloop continue FEAT-003
+
+/devloop status FEAT-003
+→ state: paused
+→ stopped_at: requirements
+→ reason: human_gate_checkpoint
+→ next_action: /devloop continue FEAT-003
+
+/devloop continue FEAT-003
+→ resumes at design
 ```
 
 ## Profile summary
@@ -47,14 +67,18 @@ profile: standard
 mode: loop
 
 artifacts_checked:
-  - artifacts/FEAT-003/02-design/architecture.md (v1)
-  - artifacts/FEAT-003/02-design/review-log.md
+  - artifacts/FEAT-003/02-design/architecture.md@v1
+  - artifacts/FEAT-003/02-design/review-log.md@v1
+  - traceability/FEAT-003/matrix.md
+  - traceability/FEAT-003/package-evidence-index.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
   - [x] Required artifacts exist for profile
   - [x] Traces to upstream requirements present
   - [x] Human approval recorded (if required)
+  - [x] Package evidence index and matrix reflect this phase outcome
+  - [x] Exact evidence bindings recorded in artifacts_checked
 
 findings: []
 reentry: 0
@@ -71,18 +95,29 @@ profile: standard
 mode: loop
 
 artifacts_checked:
-  - artifacts/FEAT-PARENT/07-release-retro/release-notes.md (v1)
-  - artifacts/FEAT-PARENT/07-release-retro/review-log.md
+  - artifacts/FEAT-PARENT/07-release-retro/release-notes.md@v1
+  - artifacts/FEAT-PARENT/07-release-retro/known-issues.md@v1
+  - artifacts/FEAT-PARENT/07-release-retro/retro.md@v1
+  - artifacts/FEAT-PARENT/07-release-retro/review-log.md@v1
+  - traceability/FEAT-PARENT/matrix.md
+  - traceability/FEAT-PARENT/package-evidence-index.md
   - .ai/packages/FEAT-CHILD/package.yaml
-  - .ai/packages/FEAT-CHILD/gates/requirements-1.md
-  - .ai/packages/FEAT-CHILD/gates/design-1.md
-  - .ai/packages/FEAT-CHILD/gates/test-plan-1.md
+  - traceability/FEAT-CHILD/package-evidence-index.md
+  - .ai/packages/FEAT-CHILD/gates/release-1.md
 
 checklist:
   - [x] L1 self-review complete, no blocking failures
   - [x] Required artifacts exist for profile
-  - [x] Child FEAT-CHILD readiness verified
   - [x] Human approval recorded (if required)
+  - [x] Package evidence index and matrix reflect this phase outcome
+  - [x] Exact evidence bindings recorded in artifacts_checked
+
+child_evidence:
+  - child_id: FEAT-CHILD
+    status: ready_for_release
+    package: .ai/packages/FEAT-CHILD/package.yaml
+    latest_gate: .ai/packages/FEAT-CHILD/gates/release-1.md
+    evidence_index: traceability/FEAT-CHILD/package-evidence-index.md
 
 findings: []
 reentry: 0

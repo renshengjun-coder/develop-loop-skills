@@ -157,8 +157,9 @@ After **global install** + **project init**, open your app repo in Cursor, Claud
 
 ```text
 /devloop start FEAT-001          # create package, classify, pick profile
-/devloop run FEAT-001            # E2E loop (auto re-entry on gate fail)
-/devloop status FEAT-001         # package status and blockers
+/devloop run FEAT-001            # start E2E loop; pauses at human checkpoints
+/devloop continue FEAT-001       # resume from the last checkpoint or stop
+/devloop status FEAT-001         # package status, blockers, run_control
 ```
 
 ### Agent slash commands
@@ -168,10 +169,11 @@ Orchestrator: **`/devloop`** (not `/loop` — avoids Cursor built-in collision).
 | Command | Description |
 |---------|-------------|
 | `/devloop start <id>` | Create package from template, classify, select profile |
-| `/devloop run <id>` | E2E orchestration (loop mode) |
+| `/devloop run <id>` | E2E orchestration (loop mode; pauses after human-gate checkpoints) |
+| `/devloop continue <id>` | Resume from a checkpoint, gate-fail stop, escalation stop, error stop, or interrupted run |
 | `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase |
-| `/devloop status <id>` | Summarize package, gates, blockers |
+| `/devloop status <id>` | Summarize package, gates, blockers, and `run_control` |
 | `/devloop classify <id>` | Re-run or confirm complexity classification |
 
 ### Standalone phase skills
@@ -193,6 +195,7 @@ Each phase writes to `artifacts/<id>/<phase-folder>/` and updates `.ai/packages/
 | What | Path |
 |------|------|
 | Change package manifest | `.ai/packages/<id>/package.yaml` |
+| Run control state | `.ai/packages/<id>/package.yaml` → `run_control` |
 | Gate decisions (L2) | `.ai/packages/<id>/gates/` |
 | SDLC artifacts | `artifacts/<id>/` |
 | Trace matrix | `traceability/<id>/matrix.md` |
@@ -243,7 +246,7 @@ Primary human audit entry point per package: `traceability/<id>/package-evidence
 
 Human-readable package evidence is now contract-defined in `.ai/contracts/evidence-policy.yaml`. The current policy requires both `matrix.md` and `package-evidence-index.md`, requires those files to appear in each archived gate's `artifacts_checked` list, and sets compatibility posture to `when_missing: error` for the `human_readable_evidence` section.
 
-Parent-child release verification is also policy-driven. The current policy enables a light release binding set for parents with children: child package manifest, the child gate for the package's current archived phase, child package evidence index, and a `child_evidence` block that records `status`, `package`, `latest_gate`, and `evidence_index`.
+Parent-child release verification is also policy-driven. The current policy enables a light release binding set for parents with children: child package manifest, the child gate for the package's current archived phase, child package evidence index, and a `child_evidence` block that records `status`, `package`, `latest_gate`, and `evidence_index`. Those fields must agree with each other, so a child bound to `gates/release-*.md` should also report a release-ready child status rather than a merge-ready one.
 
 ## Directory layout (consumer project after `devloop init`)
 
