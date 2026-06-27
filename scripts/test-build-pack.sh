@@ -12,7 +12,7 @@ PACK="$ROOT/pack"
 count=$(find "$PACK/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 [[ "$count" -eq 9 ]] || { echo "FAIL: expected 9 skills, got $count"; exit 1; }
 
-for skill in lifecycle-loop 01-requirement traceability; do
+for skill in devloop 01-requirement traceability; do
   [[ -f "$PACK/skills/$skill/SKILL.md" ]] || { echo "FAIL: missing $skill/SKILL.md"; exit 1; }
 done
 

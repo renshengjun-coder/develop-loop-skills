@@ -8,7 +8,7 @@ description: >-
 
 # Release & Retro Phase Skill
 
-Fully owns the **release phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **release phase**. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 
@@ -90,7 +90,7 @@ If `release` is not in `human_gates`: set `status: reviewed` on all four report 
 4. Update `.ai/packages/<package_id>/package.yaml` → `phases.release.status: archived`, `artifact_version: v<n>`
 5. Set package `status: ready_for_release`
 6. Load `.ai/skills/traceability/SKILL.md` — confirm matrix **Status** per AC aligns with test-report; update Notes if release changes auditor-facing status
-7. **Do not** write gate PASS — lifecycle-loop owns L2
+7. **Do not** write gate PASS — devloop owns L2
 
 ## Quality criteria
 

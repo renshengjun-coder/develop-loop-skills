@@ -8,7 +8,7 @@ description: >-
 
 # Code-Review Phase Skill
 
-Fully owns the **code-review phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **code-review phase**. Runnable standalone or when invoked by devloop.
 
 Act as an **independent reviewer**: judge only from the archived artifacts and the actual repository state, not from any implementation-phase conversation or memory. Re-read all evidence from disk. When run inside a loop that also produced the implementation, treat prior reasoning as untrusted and prefer dispatching review to a separate agent/context so findings are evidence-grounded rather than inheriting implementation assumptions.
 
@@ -162,7 +162,7 @@ If `code-review` is not included, set all seven review artifacts' frontmatter `s
 2. Verify the recorded repository comparison is current, every changed path remains accounted for, `blocking-issues.md` retains all resolved entries with `blocking_count: 0`, and all seven review artifacts are `approved` for a human gate or `reviewed` otherwise.
 3. Update `.ai/packages/<package_id>/package.yaml` → `phases.code-review.status: archived`, `artifact_version: v<n>`.
 4. Load `.ai/skills/traceability/SKILL.md` and update matrix Status or Notes when code-review findings change AC coverage or status, then refresh `traceability/<package_id>/package-evidence-index.md` so it cites the archived code-review evidence and any approval.
-5. **Do not** write gate PASS — lifecycle-loop owns L2.
+5. **Do not** write gate PASS — devloop owns L2.
 
 ## Quality criteria
 

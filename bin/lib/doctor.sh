@@ -2,7 +2,7 @@
 # bin/lib/doctor.sh
 set -euo pipefail
 
-_SKILLS=(lifecycle-loop 01-requirement traceability)
+_SKILLS=(devloop 01-requirement traceability)
 
 devloop_cmd_doctor() {
   local root uh errors=0 pv cv

@@ -58,7 +58,7 @@ cd my-app && devloop init    # once per project
 
 | Skill | Role |
 |-------|------|
-| `lifecycle-loop` | Orchestrator — `/devloop start\|run\|gate\|status\|classify` |
+| `devloop` | Orchestrator — `/devloop start\|run\|gate\|status\|classify` |
 | `01-requirement` … `07-release-retro` | Phase skills (L1) |
 | `traceability` | Trace matrix helper |
 
@@ -102,7 +102,7 @@ Demo packages (`FEAT-001`, `FEAT-003`, etc.) remain in the **skills repo** for d
 
 `scripts/build-pack.sh` (release CI):
 
-1. Copy `.ai/skills/**` → `pack/skills/` with stable directory names (`lifecycle-loop`, `01-requirement`, …).
+1. Copy `.ai/skills/**` → `pack/skills/` with stable directory names (`devloop`, `01-requirement`, …).
 2. Expand any pointer-only `.cursor/skills/` stubs into full skill bodies in `pack/skills/`.
 3. Copy templates: `profiles.yaml`, `_template/`, `AGENTS.md`, workflow YAML → `pack/templates/`.
 4. Stamp version into `pack/VERSION`.

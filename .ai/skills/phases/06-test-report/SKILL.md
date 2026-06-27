@@ -8,7 +8,7 @@ description: >-
 
 # Test-Report Phase Skill
 
-Fully owns the **test-report phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **test-report phase**. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 
@@ -132,7 +132,7 @@ If `test-report` is not included in `human_gates`, revalidate the upstream input
    - `covered` only when all required validations passed.
    - `failed` when any required validation failed, was skipped, or lacks executable evidence; retain `failed` when a waiver permits a `go`, and cite the waiver.
    - Cite current TC IDs, frozen report version, defects/gaps, waivers, and material N/A rationale in Notes.
-5. **Do not** write gate PASS - lifecycle-loop owns L2.
+5. **Do not** write gate PASS - devloop owns L2.
 
 ## Quality criteria
 

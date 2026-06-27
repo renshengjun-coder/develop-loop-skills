@@ -9,7 +9,7 @@ description: >-
 
 # Design Phase Skill
 
-Fully owns the **design phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **design phase**. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 

@@ -7,7 +7,7 @@ PACK="$ROOT/pack"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 
 declare -a SKILL_MAP=(
-  "lifecycle-loop:.ai/skills/lifecycle-loop"
+  "devloop:.ai/skills/devloop"
   "01-requirement:.ai/skills/phases/01-requirement"
   "02-design:.ai/skills/phases/02-design"
   "03-test-plan:.ai/skills/phases/03-test-plan"

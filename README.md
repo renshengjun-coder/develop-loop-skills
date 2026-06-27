@@ -33,7 +33,7 @@ Produces:
 pack/
   VERSION                 # e.g. 0.3.0 (from repo VERSION file)
   skills/                 # 9 self-contained SKILL.md trees
-    lifecycle-loop/
+    devloop/
     01-requirement/ … 07-release-retro/
     traceability/
   templates/              # copied into target projects by devloop init
@@ -134,6 +134,12 @@ devloop install --global --upgrade   # refresh global skills
 devloop init --upgrade               # refresh project templates (never touches artifacts/ or packages/<id>/)
 ```
 
+After upgrading from a release that used `lifecycle-loop`, remove stale global skill dirs manually:
+
+```bash
+rm -rf ~/.cursor/skills/lifecycle-loop ~/.claude/skills/lifecycle-loop
+```
+
 ### `devloop` CLI reference
 
 | Command | Description |
@@ -230,7 +236,7 @@ To work on skills here, edit `.ai/skills/` and use the pointer layout under `.cu
 
 - **7 phase skills:** requirements through release-retro
 - **3 profiles:** `routine`, `standard`, `high_risk`
-- **Parent-child packages:** orchestration in lifecycle-loop
+- **Parent-child packages:** orchestration in devloop
 - **Packaging CLI:** `bin/devloop` (global install + project init)
 - **CI enforce mode:** `--enforce` flag on `loop-verify.sh`
 

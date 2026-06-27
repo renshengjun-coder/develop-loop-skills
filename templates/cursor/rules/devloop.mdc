@@ -6,6 +6,6 @@ alwaysApply: true
 
 # Develop Loop
 
-- Orchestrator: `/devloop start|run|continue|gate|status|classify`
+- Orchestrator skill: `devloop` — user commands: `/devloop start|run|continue|gate|status|classify`
 - Read project `AGENTS.md` for state paths (`.ai/packages/`, `artifacts/`, `traceability/`)
 - Phase skills are installed globally; follow archived design and acceptance criteria in `artifacts/<id>/`

@@ -9,7 +9,7 @@ description: >-
 
 # Test-Plan Phase Skill
 
-Fully owns the **test-plan phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **test-plan phase**. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 

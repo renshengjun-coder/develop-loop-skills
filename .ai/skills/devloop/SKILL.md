@@ -1,13 +1,13 @@
 ---
-name: lifecycle-loop
+name: devloop
 description: >-
-  Orchestrates end-to-end SDLC for a change package. Classifies complexity,
-  selects workflow profile, invokes phase skills, issues L2 gate decisions,
-  controls loop/pipeline re-entry. Use for /devloop start, /devloop run, /devloop gate,
-  /devloop status, /devloop classify, lifecycle, SDLC loop, quality gate.
+  Develop Loop SDLC orchestrator. Classifies complexity, selects workflow profile,
+  invokes phase skills, issues L2 gate decisions, controls loop/pipeline re-entry.
+  Use for /devloop start, /devloop run, /devloop gate, /devloop status,
+  /devloop classify, devloop, SDLC orchestrator, quality gate.
 ---
 
-# Lifecycle Loop Skill
+# Devloop Skill
 
 Universal orchestrator for the Develop Loop SDLC. **Does not author phase artifacts** — delegates to phase skills and evaluates their outputs at L2.
 

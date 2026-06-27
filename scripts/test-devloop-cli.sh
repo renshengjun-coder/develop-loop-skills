@@ -12,8 +12,8 @@ mkdir -p "$DEVLOOP_HOME"
 
 "$ROOT/bin/devloop" install --global --runtimes cursor,codex
 
-[[ -f "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop/SKILL.md" ]] \
-  || { echo "FAIL: cursor lifecycle-loop not installed"; exit 1; }
+[[ -f "$DEVLOOP_HOME/.cursor/skills/devloop/SKILL.md" ]] \
+  || { echo "FAIL: cursor devloop not installed"; exit 1; }
 [[ -f "$DEVLOOP_HOME/.codex/AGENTS.md" ]] \
   || { echo "FAIL: codex AGENTS.md not installed"; exit 1; }
 grep -q "/devloop continue <id>" "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop/SKILL.md" \

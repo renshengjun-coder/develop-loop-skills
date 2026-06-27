@@ -2,8 +2,8 @@
 
 - **Date:** 2026-06-26
 - **Status:** Approved (design)
-- **Scope:** `lifecycle-loop` orchestrator behavior, `package.yaml` state model, `devloop` command set
-- **Related:** `.ai/skills/lifecycle-loop/SKILL.md`, `.ai/config/profiles.yaml`, `.ai/contracts/evidence-policy.yaml`
+- **Scope:** `devloop` orchestrator behavior, `package.yaml` state model, `devloop` command set
+- **Related:** `.ai/skills/devloop/SKILL.md`, `.ai/config/profiles.yaml`, `.ai/contracts/evidence-policy.yaml`
 
 ## Problem
 
@@ -121,8 +121,8 @@ Add a `run_control` summary line: `state`, `stopped_at`, `reason`, `since`, and 
 
 ## Files to change
 
-- `.ai/skills/lifecycle-loop/SKILL.md` — commands table; Run/Continue/Checkpoint steps; state model.
-- `.ai/skills/lifecycle-loop/reference.md` — command cheat sheet; checkpoint + continue examples.
+- `.ai/skills/devloop/SKILL.md` — commands table; Run/Continue/Checkpoint steps; state model.
+- `.ai/skills/devloop/reference.md` — command cheat sheet; checkpoint + continue examples.
 - `.ai/packages/_template/package.yaml` — add `run_control` with `state: running`.
 - `README.md` — command tables + quick start (`continue`, checkpoint note).
 - `AGENTS.md`, `templates/AGENTS.md`, `templates/cursor/rules/devloop.mdc` — add `continue` to command lists.

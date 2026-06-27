@@ -37,7 +37,7 @@
 
 | `pack/skills/<name>/` | Source |
 |-----------------------|--------|
-| `lifecycle-loop` | `.ai/skills/lifecycle-loop/` |
+| `devloop` | `.ai/skills/devloop/` |
 | `01-requirement` | `.ai/skills/phases/01-requirement/` |
 | `02-design` | `.ai/skills/phases/02-design/` |
 | `03-test-plan` | `.ai/skills/phases/03-test-plan/` |
@@ -159,7 +159,7 @@ PACK="$ROOT/pack"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 
 declare -a SKILL_MAP=(
-  "lifecycle-loop:.ai/skills/lifecycle-loop"
+  "devloop:.ai/skills/devloop"
   "01-requirement:.ai/skills/phases/01-requirement"
   "02-design:.ai/skills/phases/02-design"
   "03-test-plan:.ai/skills/phases/03-test-plan"
@@ -231,7 +231,7 @@ PACK="$ROOT/pack"
 count=$(find "$PACK/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 [[ "$count" -eq 9 ]] || { echo "FAIL: expected 9 skills, got $count"; exit 1; }
 
-for skill in lifecycle-loop 01-requirement traceability; do
+for skill in devloop 01-requirement traceability; do
   [[ -f "$PACK/skills/$skill/SKILL.md" ]] || { echo "FAIL: missing $skill/SKILL.md"; exit 1; }
 done
 
@@ -417,7 +417,7 @@ git commit -m "feat: add AGENTS.md merge helper for devloop init"
 set -euo pipefail
 
 _SKILLS=(
-  lifecycle-loop 01-requirement 02-design 03-test-plan
+  devloop 01-requirement 02-design 03-test-plan
   04-implementation 05-code-review 06-test-report 07-release-retro
   traceability
 )
@@ -608,7 +608,7 @@ git commit -m "feat: add devloop init command"
 # bin/lib/doctor.sh
 set -euo pipefail
 
-_SKILLS=(lifecycle-loop 01-requirement traceability)
+_SKILLS=(devloop 01-requirement traceability)
 
 devloop_cmd_doctor() {
   local root uh errors=0
@@ -790,8 +790,8 @@ mkdir -p "$DEVLOOP_HOME"
 # Global install (cursor + codex only in test)
 "$ROOT/bin/devloop" install --global --runtimes cursor,codex
 
-[[ -f "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop/SKILL.md" ]] \
-  || { echo "FAIL: cursor lifecycle-loop not installed"; exit 1; }
+[[ -f "$DEVLOOP_HOME/.cursor/skills/devloop/SKILL.md" ]] \
+  || { echo "FAIL: cursor devloop not installed"; exit 1; }
 [[ -f "$DEVLOOP_HOME/.codex/AGENTS.md" ]] \
   || { echo "FAIL: codex AGENTS.md not installed"; exit 1; }
 

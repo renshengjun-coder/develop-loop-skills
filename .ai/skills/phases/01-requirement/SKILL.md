@@ -9,7 +9,7 @@ description: >-
 
 # Requirements Phase Skill
 
-Fully owns the **requirements phase** for a change package. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **requirements phase** for a change package. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 
@@ -107,7 +107,7 @@ If not in `human_gates`: set `status: reviewed` on artifacts.
        artifact_version: v1
    ```
 4. Load `.ai/skills/traceability/SKILL.md` and seed matrix rows from AC IDs.
-5. **Do not** write gate PASS — lifecycle-loop owns L2.
+5. **Do not** write gate PASS — devloop owns L2.
 
 ## Quality criteria
 

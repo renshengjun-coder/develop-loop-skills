@@ -9,7 +9,7 @@ description: >-
 
 # Implementation Phase Skill
 
-Fully owns the **implementation phase**. Runnable standalone or when invoked by lifecycle-loop.
+Fully owns the **implementation phase**. Runnable standalone or when invoked by devloop.
 
 ## Required inputs
 
@@ -99,7 +99,7 @@ If `implementation` is not included, set artifact `status: reviewed`. No Phase 2
 1. Bump `version` in frontmatter if this is a revision.
 2. Update `.ai/packages/<package_id>/package.yaml` → `phases.implementation.status: archived`, `artifact_version: v<n>`.
 3. Load `.ai/skills/traceability/SKILL.md` and fill the matrix **Code File(s)** column from `changed-files.md`.
-4. **Do not** write gate PASS — lifecycle-loop owns L2.
+4. **Do not** write gate PASS — devloop owns L2.
 
 ## Quality criteria
 

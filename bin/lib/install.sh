@@ -3,7 +3,7 @@
 set -euo pipefail
 
 _SKILLS=(
-  lifecycle-loop 01-requirement 02-design 03-test-plan
+  devloop 01-requirement 02-design 03-test-plan
   04-implementation 05-code-review 06-test-report 07-release-retro
   traceability
 )
