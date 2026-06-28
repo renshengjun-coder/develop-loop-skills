@@ -16,8 +16,12 @@ mkdir -p "$DEVLOOP_HOME"
   || { echo "FAIL: cursor devloop not installed"; exit 1; }
 [[ -f "$DEVLOOP_HOME/.codex/AGENTS.md" ]] \
   || { echo "FAIL: codex AGENTS.md not installed"; exit 1; }
-grep -q "/devloop continue <id>" "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop/SKILL.md" \
-  || { echo "FAIL: installed lifecycle-loop skill missing continue command"; exit 1; }
+[[ ! -e "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop" ]] \
+  || { echo "FAIL: legacy lifecycle-loop skill should not be installed"; exit 1; }
+grep -q "/devloop continue <id>" "$DEVLOOP_HOME/.cursor/skills/devloop/SKILL.md" \
+  || { echo "FAIL: installed devloop skill missing continue command"; exit 1; }
+grep -q "do \\*\\*not\\*\\* start the next phase" "$DEVLOOP_HOME/.cursor/skills/devloop/SKILL.md" \
+  || { echo "FAIL: installed devloop skill missing hard-stop checkpoint wording"; exit 1; }
 grep -q "/devloop continue <id>" "$DEVLOOP_HOME/.codex/AGENTS.md" \
   || { echo "FAIL: installed codex AGENTS missing continue command"; exit 1; }
 
@@ -70,6 +74,45 @@ echo "# Upgrade Test" > "$PROJ/AGENTS.md"
 )
 grep -Fq "/devloop start|run|continue|gate|status|classify" "$PROJ/.cursor/rules/devloop.mdc" \
   || { echo "FAIL: init --upgrade should refresh stale Cursor rule"; exit 1; }
+
+mkdir -p "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop" "$DEVLOOP_HOME/.claude/skills/lifecycle-loop"
+echo "legacy" > "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop/SKILL.md"
+echo "legacy" > "$DEVLOOP_HOME/.claude/skills/lifecycle-loop/SKILL.md"
+mkdir -p "$DEVLOOP_HOME/.codex"
+cat > "$DEVLOOP_HOME/.codex/AGENTS.md" <<'EOF'
+# Personal Notes
+
+<!-- DEVLOOP:BEGIN -->
+# Develop Loop
+
+AI-native SDLC skills for this project. Skills are installed globally via `devloop install --global`.
+
+## Commands
+
+Orchestrator slash command: **`/devloop`**
+
+| Command | Description |
+|---------|-------------|
+| `/devloop start <id>` | Create package, classify, select profile |
+| `/devloop run <id>` | E2E orchestration (loop mode) |
+| `/devloop gate <id> <phase>` | L2 gate check for one phase |
+| `/devloop status <id>` | Package status and blockers |
+| `/devloop classify <id>` | Re-run complexity classification |
+
+<!-- DEVLOOP:END -->
+EOF
+"$ROOT/bin/devloop" install --global --upgrade --runtimes cursor,claude
+[[ ! -e "$DEVLOOP_HOME/.cursor/skills/lifecycle-loop" ]] \
+  || { echo "FAIL: install --upgrade should remove legacy cursor lifecycle-loop"; exit 1; }
+[[ ! -e "$DEVLOOP_HOME/.claude/skills/lifecycle-loop" ]] \
+  || { echo "FAIL: install --upgrade should remove legacy claude lifecycle-loop"; exit 1; }
+"$ROOT/bin/devloop" install --global --upgrade --runtimes codex
+grep -q "^# Personal Notes$" "$DEVLOOP_HOME/.codex/AGENTS.md" \
+  || { echo "FAIL: codex upgrade should preserve existing AGENTS content"; exit 1; }
+grep -q "/devloop continue <id>" "$DEVLOOP_HOME/.codex/AGENTS.md" \
+  || { echo "FAIL: codex upgrade should refresh devloop block with continue command"; exit 1; }
+grep -Fq 'waits for `/devloop continue <id>` before any later phase starts' "$DEVLOOP_HOME/.codex/AGENTS.md" \
+  || { echo "FAIL: codex upgrade should refresh run command description"; exit 1; }
 
 echo "# My App" > "$PROJ/AGENTS.md"
 (

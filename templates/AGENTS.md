@@ -9,7 +9,7 @@ Orchestrator slash command: **`/devloop`**
 | Command | Description |
 |---------|-------------|
 | `/devloop start <id>` | Create package, classify, select profile |
-| `/devloop run <id>` | E2E orchestration (loop mode; pauses at human checkpoints) |
+| `/devloop run <id>` | E2E orchestration (loop mode; pauses after human-gate checkpoints and waits for `/devloop continue <id>` before any later phase starts) |
 | `/devloop continue <id>` | Resume from a checkpoint or other stop state |
 | `/devloop run <id> --pipeline` | Single pass per phase |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase |

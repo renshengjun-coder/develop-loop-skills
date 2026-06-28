@@ -8,6 +8,14 @@ _SKILLS=(
   traceability
 )
 
+remove_legacy_orchestrator_skill() {
+  local base="$1"
+  if [[ -d "$base/lifecycle-loop" ]]; then
+    rm -rf "$base/lifecycle-loop"
+    echo "removed legacy skill $base/lifecycle-loop"
+  fi
+}
+
 devloop_cmd_install() {
   local global=0 upgrade=0
   local runtimes="cursor,claude,codex"
@@ -44,6 +52,7 @@ devloop_cmd_install() {
   for rt in "${runtime_list[@]}"; do
     case "$rt" in
       cursor)
+        [[ "$upgrade" -eq 1 ]] && remove_legacy_orchestrator_skill "$uh/.cursor/skills"
         for skill in "${_SKILLS[@]}"; do
           dest="$uh/.cursor/skills/$skill"
           mkdir -p "$dest"
@@ -53,6 +62,7 @@ devloop_cmd_install() {
         done
         ;;
       claude)
+        [[ "$upgrade" -eq 1 ]] && remove_legacy_orchestrator_skill "$uh/.claude/skills"
         for skill in "${_SKILLS[@]}"; do
           dest="$uh/.claude/skills/$skill"
           mkdir -p "$dest"

@@ -4,7 +4,7 @@
 
 ```text
 /devloop start FEAT-003             # create package + classify
-/devloop run FEAT-003               # start loop; pauses at human checkpoints
+/devloop run FEAT-003               # start loop; pauses at human checkpoints and stops there
 /devloop continue FEAT-003          # resume from checkpoint or stop
 /devloop run FEAT-003 --pipeline    # single pass
 /devloop gate FEAT-003 design       # gate one phase
@@ -19,6 +19,7 @@
 → requirements archived
 → requirements gate passed
 → paused at human gate checkpoint
+→ design does not start yet
 → next: /devloop continue FEAT-003
 
 /devloop status FEAT-003

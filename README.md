@@ -159,11 +159,7 @@ devloop init --upgrade               # refresh template-managed project files
 
 It does **not** rewrite package-specific working evidence under `.ai/packages/<id>/`, `artifacts/<id>/`, or `traceability/<id>/`.
 
-After upgrading from a release that used `lifecycle-loop`, remove stale global skill dirs manually:
-
-```bash
-rm -rf ~/.cursor/skills/lifecycle-loop ~/.claude/skills/lifecycle-loop
-```
+`devloop install --global --upgrade` also removes stale legacy `lifecycle-loop` skill directories from Cursor and Claude installs when present.
 
 ### `devloop` CLI reference
 
@@ -200,7 +196,7 @@ Orchestrator: **`/devloop`** (not `/loop` — avoids Cursor built-in collision).
 | Command | Description |
 |---------|-------------|
 | `/devloop start <id>` | Create package from template, classify, select profile |
-| `/devloop run <id>` | E2E orchestration (loop mode; pauses after human-gate checkpoints) |
+| `/devloop run <id>` | E2E orchestration (loop mode; pauses after human-gate checkpoints and waits for `/devloop continue <id>` before any later phase starts) |
 | `/devloop continue <id>` | Resume from a checkpoint, gate-fail stop, escalation stop, error stop, or interrupted run |
 | `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase |

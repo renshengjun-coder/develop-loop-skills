@@ -18,7 +18,7 @@ User-facing slash command is **`/devloop`** (not `/loop`) to avoid colliding wit
 | Command | Behavior |
 |---------|----------|
 | `/devloop start <id>` | Create package from `_template`, classify, select profile, show execution plan |
-| `/devloop run <id>` | Full E2E in **loop** mode (default); pauses at human-gate checkpoints and auto re-entry on gate fail |
+| `/devloop run <id>` | Full E2E in **loop** mode (default); pauses at human-gate checkpoints and never starts the next phase until `/devloop continue <id>` |
 | `/devloop run <id> --pipeline` | Single pass per phase; stop on first gate fail |
 | `/devloop continue <id>` | Resume from a checkpoint or other stop state using the persisted `run_control` block |
 | `/devloop gate <id> <phase>` | L2 gate check for one phase only; reject if `<phase>` is not in `active_profile` phases unless user explicitly overrides |
@@ -100,7 +100,8 @@ run_control:
 ```
 
 5. Append a `paused` history entry, report the checkpoint, and stop.
-6. If a run stops without reaching a human checkpoint or `done`, persist a stop block before returning control to the user:
+6. **Hard stop rule:** once a human-gated phase has passed and `run_control.state` is `paused`, do **not** start the next phase in the same `/devloop run <id>` invocation. Return control to the user immediately and require `/devloop continue <id>` before any later phase starts. For the `standard` profile, an approved and gated `requirements` phase must stop before `design` begins.
+7. If a run stops without reaching a human checkpoint or `done`, persist a stop block before returning control to the user:
 
 ```yaml
 run_control:
@@ -111,13 +112,13 @@ run_control:
   next_action: "/devloop continue <id>"
 ```
 
-7. Use the existing reason enum exactly:
+8. Use the existing reason enum exactly:
    - `gate_fail` when pipeline mode stops on the first failed gate, or when loop mode stops because the failed gate must be revisited manually before any re-entry can proceed
    - `escalation` when `max_reentry` is exhausted, repeated blocking findings force escalation, or a waiver/manual decision is required
    - `error` when the phase skill or orchestration fails before a gate decision can complete
    - `interrupted` when the run is intentionally aborted before the current phase completes
-8. Append a matching `stopped` history entry whenever one of those stop reasons is written, report `stopped_at`, `reason`, `since`, and `next_action`, then stop.
-9. If all active profile phases pass, set `run_control.state: done`, clear `stopped_at` / `reason` / `next_action`, append a `done` history entry, and set package `status` to `ready_for_merge` or `ready_for_release` as today.
+9. Append a matching `stopped` history entry whenever one of those stop reasons is written, report `stopped_at`, `reason`, `since`, and `next_action`, then stop.
+10. If all active profile phases pass, set `run_control.state: done`, clear `stopped_at` / `reason` / `next_action`, append a `done` history entry, and set package `status` to `ready_for_merge` or `ready_for_release` as today.
 
 ### `/devloop continue <id>`
 

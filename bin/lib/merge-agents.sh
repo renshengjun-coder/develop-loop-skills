@@ -7,7 +7,7 @@ DEVLOOP_AGENTS_END="<!-- DEVLOOP:END -->"
 
 devloop_merge_agents_md() {
   local template="$1" target="$2" mode="${3:-skip}"
-  local block wrapped tmp
+  local block wrapped tmp repl_file
   block="$(cat "$template")"
   wrapped="${DEVLOOP_AGENTS_BEGIN}
 ${block}
@@ -25,12 +25,21 @@ ${DEVLOOP_AGENTS_END}"
       return 0
     fi
     tmp="$(mktemp)"
-    awk -v begin="$DEVLOOP_AGENTS_BEGIN" -v end="$DEVLOOP_AGENTS_END" -v repl="$wrapped" '
+    repl_file="$(mktemp)"
+    printf '%s\n' "$wrapped" > "$repl_file"
+    awk -v begin="$DEVLOOP_AGENTS_BEGIN" -v end="$DEVLOOP_AGENTS_END" -v repl_file="$repl_file" '
+      function emit_replacement(line) {
+        while ((getline line < repl_file) > 0) {
+          print line
+        }
+        close(repl_file)
+      }
       BEGIN { inblock=0 }
-      $0 == begin { inblock=1; print repl; next }
+      $0 == begin { inblock=1; emit_replacement(); next }
       inblock && $0 == end { inblock=0; next }
       !inblock { print }
     ' "$target" > "$tmp"
+    rm -f "$repl_file"
     mv "$tmp" "$target"
     echo "updated $target (replaced devloop block)"
     return 0

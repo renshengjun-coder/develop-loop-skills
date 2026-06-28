@@ -16,8 +16,12 @@ for skill in devloop 01-requirement traceability; do
   [[ -f "$PACK/skills/$skill/SKILL.md" ]] || { echo "FAIL: missing $skill/SKILL.md"; exit 1; }
 done
 
-grep -q "/devloop continue <id>" "$PACK/skills/lifecycle-loop/SKILL.md" \
-  || { echo "FAIL: lifecycle-loop skill missing continue command"; exit 1; }
+[[ ! -e "$PACK/skills/lifecycle-loop" ]] \
+  || { echo "FAIL: legacy lifecycle-loop pack skill should not exist"; exit 1; }
+grep -q "/devloop continue <id>" "$PACK/skills/devloop/SKILL.md" \
+  || { echo "FAIL: devloop skill missing continue command"; exit 1; }
+grep -q "do \\*\\*not\\*\\* start the next phase" "$PACK/skills/devloop/SKILL.md" \
+  || { echo "FAIL: devloop skill missing hard-stop checkpoint wording"; exit 1; }
 grep -q "^run_control:" "$PACK/templates/.ai/packages/_template/package.yaml" \
   || { echo "FAIL: package template missing run_control"; exit 1; }
 grep -q "^  state: running" "$PACK/templates/.ai/packages/_template/package.yaml" \
