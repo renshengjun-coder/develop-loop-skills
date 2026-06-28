@@ -6,6 +6,8 @@ AI-native SDLC loop skills for Cursor, Codex, and Claude Code.
 
 Develop Loop turns coding agents into **engineering process executors** — producing reviewable, versioned, traceable artifacts across the full SDLC.
 
+If you are adopting Develop Loop in an application repo, start with **Install (consumers)** and **Use (in your project)** below. The maintainer packaging notes are included later for contributors to this framework itself.
+
 The skill set is distributed in **two layers**:
 
 | Layer | What | Where |
@@ -13,7 +15,7 @@ The skill set is distributed in **two layers**:
 | **Global skills** | Agent behavior — orchestrator + 7 phase skills + traceability | `~/.cursor/skills/`, `~/.claude/skills/`, `~/.codex/AGENTS.md` |
 | **Project scaffold** | Repo state — config, templates, verify scripts, artifact dirs | `.ai/`, `artifacts/`, `traceability/`, `AGENTS.md` |
 
-Process evidence (PRD, design, gates) lives in `artifacts/`. Application code stays in your normal repo paths (`src/`, `tests/`, etc.) and is linked via `changed-files.md` and the trace matrix.
+Phase evidence such as PRDs, design docs, review logs, and release notes lives in `artifacts/`. Gate records live in `.ai/packages/<id>/gates/`. Package-level traceability evidence lives in `traceability/`. Application code stays in your normal repo paths (`src/`, `tests/`, etc.) and is linked via `changed-files.md` and the trace matrix.
 
 ---
 
@@ -129,10 +131,33 @@ Limit runtimes: `devloop install --global --runtimes cursor,claude`
 
 ### Upgrade
 
+If you installed from a local git clone, rebuild the generated `pack/` before upgrading so the global install picks up the latest skill sources:
+
+```bash
+git pull
+./scripts/build-pack.sh
+./bin/devloop install --global --upgrade
+cd /path/to/my-app
+/path/to/develop-loop-skills/bin/devloop init --upgrade
+/path/to/develop-loop-skills/bin/devloop doctor
+```
+
+If you installed via npm, use the published CLI directly:
+
 ```bash
 devloop install --global --upgrade   # refresh global skills
-devloop init --upgrade               # refresh project templates (never touches artifacts/ or packages/<id>/)
+devloop init --upgrade               # refresh template-managed project files
 ```
+
+`devloop init --upgrade` updates scaffolded files such as:
+- `.ai/config/profiles.yaml`
+- `.ai/packages/_template/package.yaml`
+- `scripts/loop-verify.sh`
+- `.cursor/rules/devloop.mdc`
+- `.devloop-version`
+- the Develop Loop block inside `AGENTS.md`
+
+It does **not** rewrite package-specific working evidence under `.ai/packages/<id>/`, `artifacts/<id>/`, or `traceability/<id>/`.
 
 After upgrading from a release that used `lifecycle-loop`, remove stale global skill dirs manually:
 
@@ -196,6 +221,8 @@ You do not need `/devloop run` for every task. Invoke phase skills directly, e.g
 
 Each phase writes to `artifacts/<id>/<phase-folder>/` and updates `.ai/packages/<id>/package.yaml`.
 
+Important: standalone phase skills create or update phase artifacts, but they do **not** issue a final pass decision on their own. The authoritative L2 gate record is written by `/devloop run` or `/devloop gate`.
+
 ### Where things live
 
 | What | Path |
@@ -207,6 +234,47 @@ Each phase writes to `artifacts/<id>/<phase-folder>/` and updates `.ai/packages/
 | Trace matrix | `traceability/<id>/matrix.md` |
 | Workflow profiles | `.ai/config/profiles.yaml` |
 | Application code | Normal repo paths (`src/`, `lib/`, `tests/`, …) |
+
+### How Develop Loop enforces quality
+
+Develop Loop does not try to guarantee quality with a single check. It uses a 3-level loop so both humans and automation can inspect the same evidence:
+
+| Level | Owner | What it checks | Typical evidence |
+|-------|-------|----------------|------------------|
+| L1 | Phase skill | Phase-local completeness and self-review | `review-log.md` plus phase artifacts |
+| L2 | `/devloop` orchestrator | Whether a phase is allowed to advance | `.ai/packages/<id>/gates/<phase>-<n>.md` |
+| L3 | `loop-verify.sh` + `.ai/contracts/evidence-policy.yaml` | Whether the recorded evidence is structurally valid and CI-safe | package files, gate bindings, traceability files, parent-child release bindings |
+
+In practice, this means the framework helps guarantee:
+- each archived phase has a defined evidence set for the active profile
+- gate records bind the exact artifact paths used for the decision
+- traceability evidence exists at the package level, not only inside phase folders
+- higher-risk work uses more human checkpoints than routine work
+- CI can independently reject missing or inconsistent evidence even if a phase looked complete locally
+
+It does **not** automatically guarantee business correctness, good product decisions, or runtime behavior by itself. L3 is a structural quality door, not a substitute for thoughtful requirements, real tests, or human review.
+
+### How to review design quality
+
+If the active profile includes `design`, the clearest review flow is:
+
+1. Open `traceability/<id>/package-evidence-index.md` to see current readiness, latest gates, and links.
+2. Review `artifacts/<id>/02-design/architecture.md` and `artifacts/<id>/02-design/review-log.md`.
+3. Open `.ai/packages/<id>/gates/design-<n>.md` and confirm the design gate passed with the expected `artifacts_checked`, findings, and approvals.
+4. Check `traceability/<id>/matrix.md` to confirm acceptance criteria map into the design sections you just reviewed.
+5. Run `/devloop status <id>` or `./scripts/loop-verify.sh --enforce <id>` if you want an up-to-date package-level quality view.
+
+### How to review implementation quality
+
+For implementation quality, use the same package-first approach but inspect the later phases:
+
+1. Start at `traceability/<id>/package-evidence-index.md`.
+2. Review `artifacts/<id>/04-implementation/implementation-plan.md`, `changed-files.md`, `coding-log.md`, and that phase's `review-log.md`.
+3. Review `.ai/packages/<id>/gates/implementation-<n>.md`, then the latest `code-review` and `test-report` gates.
+4. Use `traceability/<id>/matrix.md` to verify AC → design → test → code links are still intact after implementation.
+5. Run `./scripts/loop-verify.sh <id>` for a normal package check or `./scripts/loop-verify.sh --enforce <id>` for CI-level strictness.
+
+The key idea is that you should not judge implementation quality from code alone. Develop Loop expects reviewers to check the linked evidence chain: requirements, design, changed scope, review findings, validation results, and final gate posture.
 
 ### Example walkthroughs
 
@@ -240,20 +308,6 @@ To work on skills here, edit `.ai/skills/` and use the pointer layout under `.cu
 - **Packaging CLI:** `bin/devloop` (global install + project init)
 - **CI enforce mode:** `--enforce` flag on `loop-verify.sh`
 
-## 3-level quality model
-
-| Level | Owner | Evidence |
-|-------|-------|----------|
-| L1 | Phase skills | `review-log.md` self-check |
-| L2 | Lifecycle loop | `gates/<phase>-<n>.md` |
-| L3 | `loop-verify.sh` + `.ai/contracts/evidence-policy.yaml` | Contract-driven structural checks for package, traceability, and gate evidence (CI) |
-
-Primary human audit entry point per package: `traceability/<id>/package-evidence-index.md`. The trace matrix remains the detailed AC-to-evidence map, while the package evidence index summarizes readiness, latest gates, approvals, waivers, and linked evidence in one place.
-
-Human-readable package evidence is now contract-defined in `.ai/contracts/evidence-policy.yaml`. The current policy requires both `matrix.md` and `package-evidence-index.md`, requires those files to appear in each archived gate's `artifacts_checked` list, and sets compatibility posture to `when_missing: error` for the `human_readable_evidence` section.
-
-Parent-child release verification is also policy-driven. The current policy enables a light release binding set for parents with children: child package manifest, the child gate for the package's current archived phase, child package evidence index, and a `child_evidence` block that records `status`, `package`, `latest_gate`, and `evidence_index`. Those fields must agree with each other, so a child bound to `gates/release-*.md` should also report a release-ready child status rather than a merge-ready one.
-
 ## Directory layout (consumer project after `devloop init`)
 
 ```text
@@ -276,6 +330,12 @@ Full SDLC design: `docs/superpowers/specs/2026-06-12-develop-loop-skills-design.
 ./scripts/loop-verify.sh --enforce FEAT-003
 ./scripts/test-loop-verify.sh
 ```
+
+Primary human audit entry point per package: `traceability/<id>/package-evidence-index.md`. The trace matrix remains the detailed AC-to-evidence map, while the package evidence index summarizes readiness, latest gates, approvals, waivers, and linked evidence in one place.
+
+Human-readable package evidence is contract-defined in `.ai/contracts/evidence-policy.yaml`. The current policy requires both `matrix.md` and `package-evidence-index.md`, requires those files to appear in each archived gate's `artifacts_checked` list, and treats missing human-readable package evidence as an error.
+
+Parent-child release verification is also policy-driven. For parents with children, the current policy requires bindings to the child package manifest, the child gate for the child's current archived phase, the child package evidence index, and a readable `child_evidence` block that records `status`, `package`, `latest_gate`, and `evidence_index`.
 
 For human review, start at `traceability/<id>/package-evidence-index.md` and follow its links into `matrix.md`, gates, and phase artifacts as needed.
 
