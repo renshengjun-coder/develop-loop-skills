@@ -1,3 +1,11 @@
+# Engineering Judgement in AI-assisted Development
+
+AI can accelerate delivery, but engineering judgment keeps the work grounded in evidence. Develop Loop uses three quality levels: **L1** phase self-review, **L2** `/devloop` gate decisions, and **L3** structural verification through `loop-verify.sh` and CI. See [How Develop Loop enforces quality](#how-develop-loop-enforces-quality).
+
+1. **How do I validate requirements?** Check that the problem, users, constraints, and acceptance criteria are explicit, testable, and traceable. L1 captures the requirement artifacts and `review-log.md`; L2 confirms the requirements gate can advance; L3 checks the package evidence and traceability files are present and consistent.
+2. **How do I validate design decisions?** Review the design against accepted requirements, risks, dependencies, and operational constraints. Use `architecture.md`, the design `review-log.md`, the design gate, and the trace matrix to confirm acceptance criteria map to design choices and that trade-offs are recorded for human review. See [How to review design quality](#how-to-review-design-quality).
+3. **How do I validate implementation quality?** Do not judge code alone. Review the implementation plan, changed files, coding log, tests, code-review evidence, test-report evidence, and later gates; then confirm the AC -> design -> test -> code links remain intact and `loop-verify.sh --enforce <id>` passes for CI-level structure. See [How to review implementation quality](#how-to-review-implementation-quality).
+
 # develop-loop-skills
 
 AI-native SDLC loop skills for Cursor, Codex, and Claude Code.
